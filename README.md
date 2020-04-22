@@ -9,9 +9,7 @@ Simple customer review bot
 ## Bot's Commands
 - Introduction - what does the bot do
 - /start  - to start the bot
-- /cancel - to stop the bot
-- /yes - to agree with bot
-- /no - to disagree with bot
+- /done - to stop the bot
 
 ## Flow chart 
 https://sketchboard.me/ZB6AjLLmvIBv#/
@@ -24,22 +22,17 @@ install pipenv for dependencies management. List of dependencies will be listed 
 pip install --user pipenv
 ```
 
-install python-telegram-bot library
+To install dependencies, use Pipfile
 ```sh
-pipenv install python-telegram-bot
-```
-
-install python-dotenv to add environment variables
-```sh
-pipenv install python-dotenv
+pipenv install Pipfile
 ```
 
 ### Environment variables set up
 - Create an .env file in the directory
-- add python-dotenv lib and os to get access to the variables
+- add python-dotenv lib and os to get access to the variables  
+
 Variables description :
-1. TELE_TOKEN
-    Token for Telegram Bot
+1. TELE_TOKEN. Token for Telegram Bot
 
 ### Python Telegram Bot Setup
 It is a library provides a pure Python interface for Telegram Bot API.
@@ -55,10 +48,18 @@ After adding all the classes with handlers and callback functions, the bot is st
 
 Handlers that were used :
 1. CommandHandler  
-    Handler class to handle Telegram commands
-2. MessageHandler
-    Handler class to handle Telegram messages such as text, media or status update
-3. ConversationHandler
-    Handler class to hold a conversation with a single user
+Handler class to handle Telegram commands
+2. MessageHandler  
+Handler class to handle Telegram messages such as text, media or status update
+3. ConversationHandler  
+Handler class to hold a conversation with a single user
 
-
+### Firestore 
+To setup Cloud Firestore follow these steps:
+1. Create a project in [Firestore console](https://console.firebase.google.com/u/0/)    
+2. Navigate to Database section and create a database
+3. Set up environment by installing the required dependencies and library
+4. Initialize Cloud Firestore SDK by using Firebase Admin SDK on your server
+    - go to project settings and navigate to Service accounts tab
+    - generate new private key (a json file will be donwloaded to your local disk and is ready to use)
+5. You are ready to add and get data!
