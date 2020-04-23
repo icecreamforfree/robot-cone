@@ -6,6 +6,7 @@ from telegram import (InlineQueryResultArticle, InputTextMessageContent,
                             ReplyKeyboardMarkup, KeyboardButton , InlineKeyboardButton,
                             InlineKeyboardMarkup, ReplyKeyboardRemove) 
 import logging 
+from firestoredb import FirestoreDB
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -34,43 +35,45 @@ rating_markup = ReplyKeyboardMarkup(rating_keyboard , one_time_keyboard=True)
 choosing_keyboard = [['Yes'] , ['No']]                    
 choosing_markup = ReplyKeyboardMarkup(choosing_keyboard , one_time_keyboard=True)
 
+# where to put
+db = FirestoreDB()
+ques = db.get_item()
+count = 0
+
+def get_question(ind):
+    global count
+    count += 1
+    return ques[ind]
+
 def start(update, context):
-    reply_text ='Hi! This is a customer review bot. Lets start! ' \
-                'What is the name of the product?'
+    reply_text ="{}".format(get_question(count))
     update.message.reply_text(reply_text)
 
     return NAME
 
 def prod_name(update, context):
-    logger.info("product name is : %s ", update.message.text)
-    update.message.reply_text("I see! How much would u like to rate this product",
-                                reply_markup= rating_markup)
-
+    logger.info("input : %s ", update.message.text)
+    reply_text ="{}".format(get_question(count))
+    update.message.reply_text(reply_text , reply_markup= rating_markup)
     return RATING
 
 def prod_rating(update, context):
-    logger.info("product rating is : %s ", update.message.text)  
-    reply_text = "Received the ratings {}. " \
-                "Next , how likely are you going to repeat your purchase?" \
-                .format(update.message.text)
-    update.message.reply_text(reply_text, reply_markup=rating_markup)
+    logger.info("input : %s ", update.message.text)  
+    reply_text = "{}".format(get_question(count))
+    update.message.reply_text(reply_text , reply_markup=rating_markup)
 
     return REPURCHASE
 
 def prod_repurchase(update, context):
-    logger.info("repurchase again rating is : %s ", update.message.text)  
-    reply_text = "Yay! cant wait to see you again! " \
-                "What product or service do you wish we carried?"
+    logger.info("input %s ", update.message.text)  
+    reply_text = "{}".format(get_question(count))
     update.message.reply_text(reply_text)
 
     return RECOMMEND
 
 def prod_recommend(update, context):
-    logger.info("recommended product is : %s ", update.message.text)  
-    reply_text = "We will take {} into consideration. " \
-                "You will hear some good news from us! " \
-                "If you would like to review another product press /start" \
-                .format(update.message.text)
+    logger.info("input %s ", update.message.text)  
+    reply_text = "{}".format(get_question(count))
     update.message.reply_text(reply_text , reply_markup=choosing_markup)
 
     return CHOOSING
@@ -83,12 +86,11 @@ def unknown(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="Wrong Command! /start to get started")
 
 def main():
-
     updater = Updater(token=TOKEN , use_context=True)
     dispatcher = updater.dispatcher
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start' , start)],
+        entry_points=[CommandHandler('start' , start)]
 
         states={
             NAME : [MessageHandler(Filters.text , prod_name)],
@@ -100,8 +102,7 @@ def main():
             RECOMMEND : [MessageHandler(Filters.text, prod_recommend)],
 
             CHOOSING : [MessageHandler(Filters.regex('^Yes$'), start),
-                        MessageHandler(Filters.regex('^No$'), done)]
-            
+                        MessageHandler(Filters.regex('^No$'), done)            
         },
         fallbacks=[CommandHandler('done', done)],
 
@@ -122,5 +123,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

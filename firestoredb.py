@@ -2,24 +2,38 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-# Use a service account
-cred = credentials.Certificate('path/to/serviceAccount.json')
-firebase_admin.initialize_app(cred)
 
-db = firestore.client()
+class FirestoreDB:
+    def __init__(self):
+        # Use a service account
+        cred = credentials.Certificate('secrets/cusreview.json')
+        firebase_admin.initialize_app(cred)
 
-#write
-doc_ref = db.collection(u'users').document(u'aturing')
-doc_ref.set({
-    u'first': u'Alan',
-    u'middle': u'Mathison',
-    u'last': u'Turing',
-    u'born': 1912
-})
+        self.db = firestore.client()
 
-#read
-users_ref = db.collection(u'users')
-docs = users_ref.stream()
+    def insert_item(self):
+        #write
+        doc_ref = self.db.collection(u'users').document(u'aturing')
+        doc_ref.set({
+            u'first': u'Alan',
+            u'middle': u'Mathison',
+            u'last': u'Turing',
+            u'born': 1912
+        })
 
-for doc in docs:
-    print(u'{} => {}'.format(doc.id, doc.to_dict()))
+    def get_item(self):
+        #read
+        users_ref = self.db.collection(u'question')
+        docs = users_ref.stream()
+
+        x = {}
+        i = 0
+        for doc in docs:
+            x[i] = doc.to_dict()
+            # print(u'{} => {}'.format(doc.id, doc.to_dict()))
+            i += 1
+        return x
+
+if __name__ == '__main__':
+    FirestoreDB()
+    
