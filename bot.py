@@ -20,7 +20,7 @@ logging.basicConfig(
 
 logger= logging.getLogger(__name__)
 
-NAME , RATING , REPURCHASE , RECOMMEND , CHOOSING = range(5)
+ONE , TWO , THREE , FOUR , FIVE = range(5)
 
 # rating_keyboard = [
 #         [InlineKeyboardButton(1 , callback_data='1'), InlineKeyboardButton(2 , callback_data='2'),
@@ -28,88 +28,99 @@ NAME , RATING , REPURCHASE , RECOMMEND , CHOOSING = range(5)
 #         InlineKeyboardButton(5 , callback_data='5'),InlineKeyboardButton(6 , callback_data='6'),
 #         InlineKeyboardButton(7 , callback_data='7'),InlineKeyboardButton(8 , callback_data='8'),
 #         InlineKeyboardButton(9 , callback_data='9'),InlineKeyboardButton(10 , callback_data='10')]]
-rating_keyboard = [['1' , '2' , '3' , '4' , '5'],
-                    ['6' , '7' , '8' , '9' , '10']]
-rating_markup = ReplyKeyboardMarkup(rating_keyboard , one_time_keyboard=True)
 
-choosing_keyboard = [['Yes'] , ['No']]                    
-choosing_markup = ReplyKeyboardMarkup(choosing_keyboard , one_time_keyboard=True)
 
 # where to put
 db = FirestoreDB()
 ques = db.get_item()
 count = 0
 
+def keyboards(count):
+    rating_keyboard = [['1' , '2' , '3' , '4' , '5'],
+                    ['6' , '7' , '8' , '9' , '10']]
+    rating_markup = ReplyKeyboardMarkup(rating_keyboard , one_time_keyboard=True)
+    remove_markup = ReplyKeyboardRemove()
+
+    if(ques[count-1]['type']['rating'] == True):
+        return rating_markup
+    else:
+        return remove_markup
+
 def get_question(ind):
     global count
     count += 1
-    return ques[ind]
+    return ques[ind]['question']
 
 def start(update, context):
     reply_text ="{}".format(get_question(count))
-    update.message.reply_text(reply_text)
+    update.message.reply_text(reply_text, reply_markup=keyboards(count))
 
-    return NAME
+    return ONE
 
-def prod_name(update, context):
+def prod_one(update, context):
     logger.info("input : %s ", update.message.text)
     reply_text ="{}".format(get_question(count))
-    update.message.reply_text(reply_text , reply_markup= rating_markup)
-    return RATING
+    update.message.reply_text(reply_text , reply_markup= keyboards(count))
+    return TWO
 
-def prod_rating(update, context):
+def prod_two(update, context):
     logger.info("input : %s ", update.message.text)  
     reply_text = "{}".format(get_question(count))
-    update.message.reply_text(reply_text , reply_markup=rating_markup)
+    update.message.reply_text(reply_text , reply_markup=keyboards(count))
 
-    return REPURCHASE
+    return THREE
 
-def prod_repurchase(update, context):
+def prod_three(update, context):
     logger.info("input %s ", update.message.text)  
     reply_text = "{}".format(get_question(count))
-    update.message.reply_text(reply_text)
+    update.message.reply_text(reply_text, reply_markup=keyboards(count))
 
-    return RECOMMEND
+    return FOUR
 
-def prod_recommend(update, context):
+def prod_four(update, context):
     logger.info("input %s ", update.message.text)  
-    reply_text = "{}".format(get_question(count))
-    update.message.reply_text(reply_text , reply_markup=choosing_markup)
-
-    return CHOOSING
+    reply_text = "DONE"
+    update.message.reply_text(reply_text , reply_markup=keyboards(count))
+    
+    return ConversationHandler.END
 
 def done(update, context):
-    update.message.reply_text('BYE')
+    update.message.reply_text('Bye! Hope to hear form you again! /start to add more ')
     return ConversationHandler.END
 
 def unknown(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="Wrong Command! /start to get started")
 
+# def msg_filter(count):
+#     if(ques[count]['type']['closed_ended'] == True):
+#         print('t')
+#         return Filters.text
+    
+#     else:
+#         print('r')
+#         return Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$')
+
 def main():
     updater = Updater(token=TOKEN , use_context=True)
     dispatcher = updater.dispatcher
-
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start' , start)]
+    print('before')
+    conversation_handler = ConversationHandler(
+        entry_points=[CommandHandler('start' , start)],
 
         states={
-            NAME : [MessageHandler(Filters.text , prod_name)],
+            ONE : [MessageHandler(Filters.text , prod_one)],
 
-            RATING : [MessageHandler(Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$'), prod_rating)],
+            TWO : [MessageHandler(Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$') , prod_two)],
 
-            REPURCHASE : [MessageHandler(Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$'), prod_repurchase)],
+            THREE : [MessageHandler(Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$') , prod_three)],
 
-            RECOMMEND : [MessageHandler(Filters.text, prod_recommend)],
-
-            CHOOSING : [MessageHandler(Filters.regex('^Yes$'), start),
-                        MessageHandler(Filters.regex('^No$'), done)            
+            FOUR : [MessageHandler(Filters.text , prod_four)],
         },
         fallbacks=[CommandHandler('done', done)],
-
-        allow_reentry=True
+        allow_reentry = True
     )
-
-    dispatcher.add_handler(conv_handler)
+    print('done')
+    dispatcher.add_handler(conversation_handler)
 
     #wrong command
     wrong_command = MessageHandler(Filters.command, unknown)

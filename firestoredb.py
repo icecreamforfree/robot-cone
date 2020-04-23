@@ -13,7 +13,7 @@ class FirestoreDB:
 
     def insert_item(self):
         #write
-        doc_ref = self.db.collection(u'users').document(u'aturing')
+        doc_ref = self.db.collection(u'users').document(u'')
         doc_ref.set({
             u'first': u'Alan',
             u'middle': u'Mathison',
@@ -35,5 +35,5 @@ class FirestoreDB:
         return x
 
 if __name__ == '__main__':
-    FirestoreDB()
+    FirestoreDB().get_item()
     
