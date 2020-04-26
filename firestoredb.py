@@ -32,6 +32,8 @@ class FirestoreDB:
             x[i] = doc.to_dict()
             # print(u'{} => {}'.format(doc.id, doc.to_dict()))
             i += 1
+        
+        # print(x[1]['type'] == 'open_ended')
         return x
 
 if __name__ == '__main__':
