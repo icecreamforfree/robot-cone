@@ -27,9 +27,10 @@ ONE , TWO , THREE , FOUR , FIVE = range(5)
 #         InlineKeyboardButton(7 , callback_data='7'),InlineKeyboardButton(8 , callback_data='8'),
 #         InlineKeyboardButton(9 , callback_data='9'),InlineKeyboardButton(10 , callback_data='10')]]
 
-# where to put
+# global
 db = FirestoreDB()
-ques = db.get_item()
+ques = db.get_question()
+ques_id = db.get_question_id()
 states_dict = {}
 
 # return the correct type of keyboard for each type of questions
@@ -46,6 +47,10 @@ def keyboards(count):
             return rating_markup 
         else:
             return remove_markup
+
+#return question id
+def get_question_id(count):
+    return ques_id[count]
 
 # return question
 def get_question(count):
@@ -65,25 +70,39 @@ def msg_filter(count):
     else:
         return Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$')
 
+def into_list(user_data):
+    data_list = list()
+
+    for key, value in user_data.items():
+        data_list.append('{} - {}'.format(key, value))
+
+    return "\n".join(data_list).join(['\n', '\n'])
+
 # callback function for MessageHandler in ConversationHandler
 def state(count):
     def _state(update, context):
         text = update.message.text
+        user_id = update.message.from_user.id
         logger.info("input %s ", text)
-        # print(count , " " , len(states_dict))
+        user_data = context.user_data
+
+        #add data to memory in user_data dictionary
+        if(count != 0 ):        
+            key = get_question_id(count-1)
+            user_data[key] = text
+            into_list(user_data)
 
         # check if the count doesnt exceed the state's dict length
         # when it reaches the last state's dict, the conversation will end
         if(count == len(states_dict)):
-            reply_text = "DONE"
+            reply_text = "This is the review details you have give us. See you again!. {}".format(into_list(user_data))
             update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove())
-            print('end')
+            db.insert_item(user_id, user_data) #insert to db
             return ConversationHandler.END
         else:
             reply_text = "{}".format(get_question(count))
             update.message.reply_text(reply_text, reply_markup=keyboards(count))
-            increment = count + 1
-            return 'STATES{}'.format(increment)
+            return 'STATES{}'.format(count + 1)
 
     return _state
 

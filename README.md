@@ -63,3 +63,16 @@ To setup Cloud Firestore follow these steps:
     - go to project settings and navigate to Service accounts tab
     - generate new private key (a json file will be donwloaded to your local disk and is ready to use)
 5. You are ready to add and get data!
+
+# How to run
+1.  Run this command to start the bot
+    ```sh
+    py bot.py
+    ```
+2.  Ctrl+C to stop
+
+# Strore Data
+1.  Use context.user_data in the handler callback to access to user-specific dict
+2.  Load any value into this dictionary to temporary store information for later use
+3.  Import the class function from firestoredb.py to bot.py
+4.  After all questions are answered, this dictionary will be used to save into database (in firestoredb.py)
