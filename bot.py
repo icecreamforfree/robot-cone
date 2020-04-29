@@ -18,20 +18,16 @@ logging.basicConfig(
 
 logger= logging.getLogger(__name__)
 
-ONE , TWO , THREE , FOUR , FIVE = range(5)
-
-# rating_keyboard = [
-#         [InlineKeyboardButton(1 , callback_data='1'), InlineKeyboardButton(2 , callback_data='2'),
-#         InlineKeyboardButton(3 , callback_data='3'),InlineKeyboardButton(4 , callback_data='4'),
-#         InlineKeyboardButton(5 , callback_data='5'),InlineKeyboardButton(6 , callback_data='6'),
-#         InlineKeyboardButton(7 , callback_data='7'),InlineKeyboardButton(8 , callback_data='8'),
-#         InlineKeyboardButton(9 , callback_data='9'),InlineKeyboardButton(10 , callback_data='10')]]
+SELECTING_OPTION , END , SHOWING = range(3)
 
 # global
 db = FirestoreDB()
 ques = db.get_question()
 ques_id = db.get_question_id()
 states_dict = {}
+user_ques = db.userinfo_question()
+user_ques_id = db.userinfo_question_id()
+user_ques_dict = {}
 
 # return the correct type of keyboard for each type of questions
 def keyboards(count):
@@ -56,6 +52,13 @@ def get_question_id(count):
 def get_question(count):
     return ques[count]['question']
 
+# return question
+def get_userinfo_question(count):
+    return user_ques[count]['question']
+
+def get_userinfo_question_id(count):
+    return user_ques_id[count]
+
 def done(update, context):
     update.message.reply_text('Bye! Hope to hear form you again! /start to add more ')
     return ConversationHandler.END
@@ -65,12 +68,29 @@ def unknown(update, context):
 
 # return the correct filters for MessageHandler 
 def msg_filter(count):
-    if(ques[count]['type'] == 'open_ended'):
-        return Filters.text
-    else:
-        return Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$')
+    if(count <= len(states_dict)):
+        if(ques[count]['type'] == 'open_ended'):
+            return Filters.text
+        else:
+            return Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$')
+
+def info_msg_filter(count):
+    if(count <= len(user_ques_dict)):
+        if(user_ques[count]['type'] == 'open_ended'):
+            return Filters.text
+        else:
+            return Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$')
+
 
 def into_list(user_data):
+    data_list = list()
+
+    for key, value in user_data.items():
+        data_list.append('{} - {}'.format(key, value))
+
+    return "\n".join(data_list).join(['\n', '\n'])
+
+def question_info_list(user_data):
     data_list = list()
 
     for key, value in user_data.items():
@@ -106,21 +126,78 @@ def state(count):
 
     return _state
 
+def user_info(count_info):
+    def _user_info(update, context):
+        keyboard = [['END']]
+        markup = ReplyKeyboardMarkup(keyboard)
+
+        # check if the count doesnt exceed the state's dict length
+        # when it reaches the last state's dict, the conversation will end
+        if(count_info == len(user_ques_dict)):
+            reply_text = "Thanks! We have got your information.")
+            update.message.reply_text(reply_text, reply_markup=markup)
+            # db.insert_item(user_id, user_data) #insert to db
+            # user_data.clear()
+            return END
+        else:
+            reply_text = "{}".format(get_userinfo_question(count_info))
+            update.message.reply_text(reply_text, reply_markup=keyboards(count_info))
+            return 'INFO{}'.format(count_info + 1)
+
+    return _user_info
+
+def start(update, context):
+    rating_keyboard = [['Info'],['Review']]
+    rating_markup = ReplyKeyboardMarkup(rating_keyboard , one_time_keyboard=True)
+    update.message.reply_text("Welcome!" , reply_markup=rating_markup)
+
+    return SELECTING_OPTION 
+
+def end(update, context):
+    print('DONE')
+
 def main():
+    updater = Updater(token=TOKEN , use_context=True)
+    dispatcher = updater.dispatcher
+
     # update dictionary based on data (questions) in db
     # which will then used for the ConversationHandler's states
     for n in ques :
-        states_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n) , state(n+1))]
+        states_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n+1) , state(n+1))]
 
-    updater = Updater(token=TOKEN , use_context=True)
-    dispatcher = updater.dispatcher
-    conversation_handler = ConversationHandler(
-        #the entry point start with the first question in db
-        entry_points=[CommandHandler('start' , state(0))],
+    for m in user_ques:
+        user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1) , user_info(m+1))]
+
+    # second level conversation handler for user info 
+    user_info_convo = ConversationHandler(
+        entry_points=[MessageHandler(Filters.regex('^(Info)$') , user_info(0))],
+        states = user_ques_dict,
+        fallbacks=[MessageHandler(Filters.regex('^END$') , end)],
+        allow_reentry = True,
+        map_to_parent={
+            END : SHOWING 
+        })
+    
+    # second level conversation handler for user review
+    review_convo = ConversationHandler(
+        entry_points=[MessageHandler(Filters.regex('^Review$') , state(0))],
         states = states_dict,
         fallbacks=[CommandHandler('done', done)],
         allow_reentry = True)
-    dispatcher.add_handler(conversation_handler)
+
+    #top level conversation handler
+    top_level_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states ={
+            SHOWING : [MessageHandler(Filters.regex('^END$') , start)],
+            SELECTING_OPTION : [
+                user_info_convo,
+                review_convo
+            ]
+        },
+        fallbacks=[CommandHandler('done' , done)],
+        allow_reentry = True)
+    dispatcher.add_handler(top_level_handler)
 
     #wrong command
     wrong_command = MessageHandler(Filters.command, unknown)
