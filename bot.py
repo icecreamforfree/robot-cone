@@ -5,11 +5,15 @@ from telegram import (InlineQueryResultArticle, InputTextMessageContent, ReplyKe
                         KeyboardButton , InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove) 
 import logging 
 from firestoredb import FirestoreDB
+from geopy.geocoders import Nominatim
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
 TOKEN = os.getenv('TELE_TOKEN')
+
+#geocoding
+geolocator = Nominatim("icecreamforfree")
 
 #handle exception
 logging.basicConfig(
@@ -147,14 +151,13 @@ def user_info(count_info , iden):
         # add data to memory in user_data dictionary
         if(count_info != 0 ):        
             key = get_question_id(count_info-1)
-            user_data[key] = tejxt
+            if(user_ques[count_info-1]['type'] == 'location'):
+                location = geolocator.reverse("{},{}".format(update.message.location.latitude, update.message.location.longitude))
+                user_data[key] = location.raw['address']['country_code']
+                logger.info("input %f %f", update.message.location.latitude, update.message.location.longitude)
+            else:
+                user_data[key] = text
             question_info_list(user_data)
-            # if(user_ques[count_info-1]['type'] == 'location'):
-            #     logger.info("input %f %f", update.message.location.latitude, update.message.location.longitude)
-        
-        for i in user_data :
-            print(i , ' ' , user_data[i])
-
 
         # check if the count doesnt exceed the state's dict length
         # when it reaches the last state's dict, the conversation will end
