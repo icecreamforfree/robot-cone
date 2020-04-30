@@ -30,19 +30,27 @@ user_ques_id = db.userinfo_question_id()
 user_ques_dict = {}
 
 # return the correct type of keyboard for each type of questions
-def keyboards(count):
+def keyboards(count, iden):
     rating_keyboard = [['1' , '2' , '3' , '4' , '5'],
                     ['6' , '7' , '8' , '9' , '10']]
     rating_markup = ReplyKeyboardMarkup(rating_keyboard , one_time_keyboard=True)
     end_keyboard = ['Yes' , 'No']
     end_markup = ReplyKeyboardMarkup(end_keyboard , one_time_keyboard=True)
-
     remove_markup = ReplyKeyboardRemove()
-    if(count < len(states_dict)):
-        if(ques[count]['type'] == 'rating'):
-            return rating_markup 
-        else:
-            return remove_markup
+    location_keyboard = [[KeyboardButton(text="send_location", request_location=True)]]
+    location_markup = ReplyKeyboardMarkup(location_keyboard)
+    if(iden == 'review'):
+        if(count < len(states_dict)):
+            if(ques[count]['type'] == 'rating'):
+                return rating_markup 
+            else:
+                return remove_markup
+    if(iden == 'userinfo'):
+        if(count < len(user_ques_dict)):
+            if(user_ques[count]['type'] == 'location'):
+                return location_markup
+            else:
+                return remove_markup
 
 #return question id
 def get_question_id(count):
@@ -99,7 +107,7 @@ def question_info_list(user_data):
     return "\n".join(data_list).join(['\n', '\n'])
 
 # callback function for MessageHandler in ConversationHandler
-def state(count):
+def state(count, iden):
     def _state(update, context):
         text = update.message.text
         user_id = update.message.from_user.id
@@ -121,27 +129,44 @@ def state(count):
             return ConversationHandler.END
         else:
             reply_text = "{}".format(get_question(count))
-            update.message.reply_text(reply_text, reply_markup=keyboards(count))
+            update.message.reply_text(reply_text, reply_markup=keyboards(count , iden))
             return 'STATES{}'.format(count + 1)
 
     return _state
 
-def user_info(count_info):
+def user_info(count_info , iden):
     def _user_info(update, context):
+        iden = 'userinfo'
         keyboard = [['END']]
         markup = ReplyKeyboardMarkup(keyboard)
+        text = update.message.text
+        user_id = update.message.from_user.id
+        logger.info("input %s ", text)
+        user_data = context.user_data
+
+        # add data to memory in user_data dictionary
+        if(count_info != 0 ):        
+            key = get_question_id(count_info-1)
+            user_data[key] = tejxt
+            question_info_list(user_data)
+            # if(user_ques[count_info-1]['type'] == 'location'):
+            #     logger.info("input %f %f", update.message.location.latitude, update.message.location.longitude)
+        
+        for i in user_data :
+            print(i , ' ' , user_data[i])
+
 
         # check if the count doesnt exceed the state's dict length
         # when it reaches the last state's dict, the conversation will end
         if(count_info == len(user_ques_dict)):
-            reply_text = "Thanks! We have got your information.")
+            reply_text = "Thanks! We have got your information. {}".format(question_info_list(user_data))
             update.message.reply_text(reply_text, reply_markup=markup)
-            # db.insert_item(user_id, user_data) #insert to db
-            # user_data.clear()
+            db.insert_user_info(user_id, user_data) #insert to db
+            user_data.clear()
             return END
         else:
             reply_text = "{}".format(get_userinfo_question(count_info))
-            update.message.reply_text(reply_text, reply_markup=keyboards(count_info))
+            update.message.reply_text(reply_text, reply_markup=keyboards(count_info, iden))
             return 'INFO{}'.format(count_info + 1)
 
     return _user_info
@@ -157,20 +182,22 @@ def end(update, context):
     print('DONE')
 
 def main():
+    iden = 'review'
+
     updater = Updater(token=TOKEN , use_context=True)
     dispatcher = updater.dispatcher
 
     # update dictionary based on data (questions) in db
     # which will then used for the ConversationHandler's states
     for n in ques :
-        states_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n+1) , state(n+1))]
+        states_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n+1) , state((n+1), iden))]
 
     for m in user_ques:
-        user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1) , user_info(m+1))]
+        user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1) , user_info((m+1), iden))]
 
     # second level conversation handler for user info 
     user_info_convo = ConversationHandler(
-        entry_points=[MessageHandler(Filters.regex('^(Info)$') , user_info(0))],
+        entry_points=[MessageHandler(Filters.regex('^(Info)$') , user_info(0, iden))],
         states = user_ques_dict,
         fallbacks=[MessageHandler(Filters.regex('^END$') , end)],
         allow_reentry = True,
@@ -180,7 +207,7 @@ def main():
     
     # second level conversation handler for user review
     review_convo = ConversationHandler(
-        entry_points=[MessageHandler(Filters.regex('^Review$') , state(0))],
+        entry_points=[MessageHandler(Filters.regex('^Review$') , state(0, iden))],
         states = states_dict,
         fallbacks=[CommandHandler('done', done)],
         allow_reentry = True)

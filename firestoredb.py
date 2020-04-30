@@ -28,6 +28,17 @@ class FirestoreDB:
         doc_ref = self.db.collection(u'review').document(str(id))
         doc_ref.set(data)
 
+    def insert_user_info(self, userID , user_data):
+        info = {}
+        for i in user_data:
+            info[i] = user_data[i]
+
+        data = {
+            u'user info': info
+        }
+        doc_ref = self.db.collection(u'user').document(u'{}'.format(userID))
+        doc_ref.set(data)
+
     #read
     def get_question(self):
         # print(users_ref.id)
