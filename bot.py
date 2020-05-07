@@ -23,7 +23,7 @@ logging.basicConfig(
 
 logger= logging.getLogger(__name__)
 
-SELECTING_OPTION , END , SHOWING , VALIDATE , REVIEW , DONE , SECOND_SHOWING , SEARCH , RECEIVEDATA = range(9)
+SELECTING_OPTION , END , SHOWING , VALIDATE , REVIEW , DONE , SECOND_SHOWING , SEARCH , RECEIVEDATA , NEXT= range(10)
 
 # global
 db = FirestoreDB()
@@ -130,7 +130,7 @@ def state(count, iden):
             reply_text = "This is the review details you have give us. See you again!. {}".format(into_list(user_data))
             update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove())
             db.insert_item(user_id, user_data) #insert to db
-            return DONE
+            return start(update,context) #after review , go back to /start menu again
         else:
             reply_text = "{}".format(get_question(count))
             update.message.reply_text(reply_text, reply_markup=keyboards(count , iden))
@@ -176,7 +176,7 @@ def user_info(count_info , iden):
 
 def start(update, context):
     rating_keyboard = [['Info'],['Review']]
-    reply_text = "Welcome, /review to start giving review /info to add info about yourself"
+    reply_text = "Welcome welcome welcome \n /review to start giving review \n /info to add info about yourself"
     rating_markup = ReplyKeyboardMarkup(rating_keyboard , one_time_keyboard=True)
     update.message.reply_text(reply_text)
 
@@ -184,15 +184,14 @@ def start(update, context):
 
 def review_menu(update, context):
     print('review menu')
-    reply_text = "/validate your product name and /ask to start giving review \
-                 validate your product, ask questions , text search " 
+    reply_text = "first, /review to add your product name. then, \n /ask to start giving review" 
     update.message.reply_text(reply_text)
 
     return REVIEW
 
 def validate_product(update , context):
     print('validate')
-    reply_text = "This is to validate product name. What is your product name?" 
+    reply_text = "This is to validate product name. \n What is your product name?" 
     update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove(), one_time_keyboard=True)  
     return SEARCH
 
@@ -209,7 +208,7 @@ def new_end(update, context):
     print("val end")
     # reply_text = "val end" 
     # update.message.reply_text(reply_text)
-    return DONE
+    return NEXT
 
 def end(update, context):
     print('end')
@@ -231,12 +230,24 @@ def main():
     for m in user_ques:
         user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1) , user_info((m+1), iden))]
 
-    # third level conversation handler for product name validation 
+    # third level conversation handler for product review 
+    review_convo = ConversationHandler(
+        entry_points=[MessageHandler(Filters.text('^NEXT$'), state(0, iden))], #start first question
+        states = states_dict,
+        fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end)],
+        allow_reentry = True,
+        map_to_parent={
+            DONE : NEXT
+        })
+
+
+    # second level conversation handler for product name validation 
     product_validation_convo = ConversationHandler(
-        entry_points=[CommandHandler('validate' , validate_product)],
+        entry_points=[CommandHandler('review' , validate_product)],
         states ={ SEARCH : [MessageHandler(Filters.text , do_search)],
                     RECEIVEDATA : [MessageHandler(Filters.regex('^No') , do_search),
-                                MessageHandler(Filters.text('^Yes') , new_end)]
+                                MessageHandler(Filters.text('^Yes') , new_end)],
+                    NEXT : [review_convo]
                 },
         fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end)],
         allow_reentry = True,
@@ -244,32 +255,6 @@ def main():
             DONE : SECOND_SHOWING
         })
         
-    # third level conversation handler for product review 
-    review_convo = ConversationHandler(
-        entry_points=[CommandHandler('ask', state(0, iden))], #start first question
-        states = states_dict,
-        fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end)],
-        allow_reentry = True,
-        map_to_parent={
-            DONE : SECOND_SHOWING 
-        })
-    
-
-    # second level conversation handler for user review menu
-    review_menu_convo = ConversationHandler(
-        entry_points=[CommandHandler('review' , review_menu)],
-        states = {
-            SECOND_SHOWING : [MessageHandler(Filters.regex('^DONE$') , review_menu)],
-            REVIEW : [
-                    product_validation_convo,
-                    review_convo]
-            },
-        fallbacks=[MessageHandler(Filters.regex('^(END)$') , end)],
-        allow_reentry = True,
-        map_to_parent={
-            END : SHOWING 
-        })
-
 
     # second level conversation handler for user info 
     user_info_convo = ConversationHandler(
@@ -289,7 +274,7 @@ def main():
             SHOWING : [MessageHandler(Filters.regex('^END$') , start)],
             SELECTING_OPTION : [
                 user_info_convo,
-                review_menu_convo
+                product_validation_convo
             ]
         },
         fallbacks=[CommandHandler('done' , done)],
