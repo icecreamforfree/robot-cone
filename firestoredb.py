@@ -2,6 +2,8 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 import uuid
+import requests
+import json
 
 
 class FirestoreDB:
@@ -88,8 +90,34 @@ class FirestoreDB:
         # print(id)
         return id
 
+    def insert_product(self):
+        id = uuid.uuid1()
+        base_url = "http://makeup-api.herokuapp.com/api/v1/products.json"
+        search_params = {
+            'brand' : 'maybelline',
+            'product_type' : 'lipstick'
+        }
+        search_response = requests.get(base_url,headers='', params=search_params)
+        # if search_response.status_code == 200 :
+        arr = {}
+        i = 0
+        for res in search_response.json():
+            # print(res)
+            arr[i] = res
+            i += 1
+        # for a in arr:
+        #     print(arr[a]['name'])
+
+        doc_ref = self.db.collection(u'product').document(u'{}'.format(str(id)))
+        doc_ref.set({
+            u'name': arr[4]['name'],
+            u'brand' : arr[4]['brand'],
+            u'price' : arr[4]['price'],
+            u'salesURL' : arr[4]['product_link']
+        })
+
 if __name__ == '__main__':
-    db = FirestoreDB().userinfo_question_id()
+    db = FirestoreDB().insert_product()
 
 
     

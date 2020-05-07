@@ -10,6 +10,7 @@ python-telegram-bot = "*"
 python-dotenv = "*"
 firebase-admin = "*"
 geopy = "*"
+algoliasearch = ">=2.0,<3.0"
 
 [requires]
 python_version = "3.8"

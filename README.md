@@ -33,6 +33,9 @@ pipenv install Pipfile
 
 Variables description :
 1. TELE_TOKEN. Token for Telegram Bot
+2. ALGOLIA_APP_ID. Algolia Application ID for data search 
+3. ALGOLIA_ADMIN_API_KEY. Algolia API key for an application
+4. ALGOLIA_INDEX_NAME. Algolia index name for keeping/storing data from db
 
 ### Python Telegram Bot Setup
 It is a library provides a pure Python interface for Telegram Bot API.
@@ -65,14 +68,26 @@ To setup Cloud Firestore follow these steps:
 5. You are ready to add and get data!
 
 # How to run
-1.  Run this command to start the bot
+1.  Spawns a shell within the virtualenv. Run
     ```sh
-    py bot.py
+    piepnv shell
     ```
-2.  Ctrl+C to stop
+2.  Run this command to start the bot
+    ```sh
+    python bot.py
+    ```
+3.  Ctrl+C to stop
 
 # Strore Data
 1.  Use context.user_data in the handler callback to access to user-specific dict
 2.  Load any value into this dictionary to temporary store information for later use
 3.  Import the class function from firestoredb.py to bot.py
 4.  After all questions are answered, this dictionary will be used to save into database (in firestoredb.py)
+
+
+# Algolia Text Search
+1. import algoliasearch module 
+2. create variables client to create a search client by validating algolia Admin API and Application ID
+3. create variable index to browse through an index name
+4. use Search method to query an index
+5. return desired data by following the response format in JSON 

@@ -6,6 +6,7 @@ from telegram import (InlineQueryResultArticle, InputTextMessageContent, ReplyKe
 import logging 
 from firestoredb import FirestoreDB
 from geopy.geocoders import Nominatim
+from text_search import search_text
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -13,7 +14,7 @@ load_dotenv()
 TOKEN = os.getenv('TELE_TOKEN')
 
 #geocoding
-geolocator = Nominatim("icecreamforfree")
+geolocator = Nominatim(user_agent="icecreamforfree")
 
 #handle exception
 logging.basicConfig(
@@ -22,7 +23,7 @@ logging.basicConfig(
 
 logger= logging.getLogger(__name__)
 
-SELECTING_OPTION , END , SHOWING = range(3)
+SELECTING_OPTION , END , SHOWING , VALIDATE , REVIEW , DONE , SECOND_SHOWING , SEARCH , RECEIVEDATA = range(9)
 
 # global
 db = FirestoreDB()
@@ -117,7 +118,6 @@ def state(count, iden):
         user_id = update.message.from_user.id
         logger.info("input %s ", text)
         user_data = context.user_data
-
         #add data to memory in user_data dictionary
         if(count != 0 ):        
             key = get_question_id(count-1)
@@ -130,7 +130,7 @@ def state(count, iden):
             reply_text = "This is the review details you have give us. See you again!. {}".format(into_list(user_data))
             update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove())
             db.insert_item(user_id, user_data) #insert to db
-            return ConversationHandler.END
+            return DONE
         else:
             reply_text = "{}".format(get_question(count))
             update.message.reply_text(reply_text, reply_markup=keyboards(count , iden))
@@ -150,7 +150,7 @@ def user_info(count_info , iden):
 
         # add data to memory in user_data dictionary
         if(count_info != 0 ):        
-            key = get_question_id(count_info-1)
+            key = get_userinfo_question_id(count_info-1)
             if(user_ques[count_info-1]['type'] == 'location'):
                 location = geolocator.reverse("{},{}".format(update.message.location.latitude, update.message.location.longitude))
                 user_data[key] = location.raw['address']['country_code']
@@ -176,13 +176,46 @@ def user_info(count_info , iden):
 
 def start(update, context):
     rating_keyboard = [['Info'],['Review']]
+    reply_text = "Welcome, /review to start giving review /info to add info about yourself"
     rating_markup = ReplyKeyboardMarkup(rating_keyboard , one_time_keyboard=True)
-    update.message.reply_text("Welcome!" , reply_markup=rating_markup)
+    update.message.reply_text(reply_text)
 
     return SELECTING_OPTION 
 
+def review_menu(update, context):
+    print('review menu')
+    reply_text = "/validate your product name and /ask to start giving review \
+                 validate your product, ask questions , text search " 
+    update.message.reply_text(reply_text)
+
+    return REVIEW
+
+def validate_product(update , context):
+    print('validate')
+    reply_text = "This is to validate product name. What is your product name?" 
+    update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove(), one_time_keyboard=True)  
+    return SEARCH
+
+def do_search(update, context):
+    print('search')
+    text = update.message.text
+    reply_text = "Do you mean {} ?".format(search_text(text))
+    update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove(), one_time_keyboard=True)  
+
+    return RECEIVEDATA
+
+ 
+def new_end(update, context):
+    print("val end")
+    # reply_text = "val end" 
+    # update.message.reply_text(reply_text)
+    return DONE
+
 def end(update, context):
-    print('DONE')
+    print('end')
+    reply_text = "end" 
+    update.message.reply_text(reply_text)
+    return ConversationHandler.END
 
 def main():
     iden = 'review'
@@ -198,9 +231,49 @@ def main():
     for m in user_ques:
         user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1) , user_info((m+1), iden))]
 
+    # third level conversation handler for product name validation 
+    product_validation_convo = ConversationHandler(
+        entry_points=[CommandHandler('validate' , validate_product)],
+        states ={ SEARCH : [MessageHandler(Filters.text , do_search)],
+                    RECEIVEDATA : [MessageHandler(Filters.regex('^No') , do_search),
+                                MessageHandler(Filters.text('^Yes') , new_end)]
+                },
+        fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end)],
+        allow_reentry = True,
+        map_to_parent={
+            DONE : SECOND_SHOWING
+        })
+        
+    # third level conversation handler for product review 
+    review_convo = ConversationHandler(
+        entry_points=[CommandHandler('ask', state(0, iden))], #start first question
+        states = states_dict,
+        fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end)],
+        allow_reentry = True,
+        map_to_parent={
+            DONE : SECOND_SHOWING 
+        })
+    
+
+    # second level conversation handler for user review menu
+    review_menu_convo = ConversationHandler(
+        entry_points=[CommandHandler('review' , review_menu)],
+        states = {
+            SECOND_SHOWING : [MessageHandler(Filters.regex('^DONE$') , review_menu)],
+            REVIEW : [
+                    product_validation_convo,
+                    review_convo]
+            },
+        fallbacks=[MessageHandler(Filters.regex('^(END)$') , end)],
+        allow_reentry = True,
+        map_to_parent={
+            END : SHOWING 
+        })
+
+
     # second level conversation handler for user info 
     user_info_convo = ConversationHandler(
-        entry_points=[MessageHandler(Filters.regex('^(Info)$') , user_info(0, iden))],
+        entry_points=[CommandHandler('info' , user_info(0, iden))],
         states = user_ques_dict,
         fallbacks=[MessageHandler(Filters.regex('^END$') , end)],
         allow_reentry = True,
@@ -208,13 +281,7 @@ def main():
             END : SHOWING 
         })
     
-    # second level conversation handler for user review
-    review_convo = ConversationHandler(
-        entry_points=[MessageHandler(Filters.regex('^Review$') , state(0, iden))],
-        states = states_dict,
-        fallbacks=[CommandHandler('done', done)],
-        allow_reentry = True)
-
+ 
     #top level conversation handler
     top_level_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -222,7 +289,7 @@ def main():
             SHOWING : [MessageHandler(Filters.regex('^END$') , start)],
             SELECTING_OPTION : [
                 user_info_convo,
-                review_convo
+                review_menu_convo
             ]
         },
         fallbacks=[CommandHandler('done' , done)],
