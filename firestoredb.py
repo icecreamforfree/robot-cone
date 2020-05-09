@@ -15,17 +15,14 @@ class FirestoreDB:
         self.db = firestore.client()
         
     #write
-    def insert_item(self, userID , user_data):
+    def insert_item(self, userID , user_data, product_id):
         #random id
         id = uuid.uuid1()
 
-        answer = {}
-        for i in user_data:
-            answer[i] = user_data[i]
-
         data = {
             u'userID': userID,
-            u'review answer': answer
+            u'productID' : product_id,
+            u'review answer': user_data
         }
         doc_ref = self.db.collection(u'review').document(str(id))
         doc_ref.set(data)
@@ -115,9 +112,23 @@ class FirestoreDB:
             u'price' : arr[4]['price'],
             u'salesURL' : arr[4]['product_link']
         })
-
+    
+    # return product id
+    def get_product_id(self, name):
+        users_ref = self.db.collection(u'product')
+        docs = users_ref.stream()
+        products = {}
+        id = {}
+        i = 0
+        for doc in docs :
+            products[doc.id] = doc.to_dict()
+            
+        for i in products: 
+            if products[i]['name'] == name:
+                return i
+     
 if __name__ == '__main__':
-    db = FirestoreDB().insert_product()
+    db = FirestoreDB().get_product_id('Maybelline Dream Matte Mousse Foundation')
 
 
     
