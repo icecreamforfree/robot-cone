@@ -15,14 +15,15 @@ class FirestoreDB:
         self.db = firestore.client()
         
     #write
-    def insert_item(self, userID , user_data, product_id):
+    def insert_item(self, userID , user_data, product_id, incentive_id):
         #random id
         id = uuid.uuid1()
 
         data = {
             u'userID': userID,
             u'productID' : product_id,
-            u'review answer': user_data
+            u'review answer': user_data,
+            u'incentiveID' : incentive_id
         }
         doc_ref = self.db.collection(u'review').document(str(id))
         doc_ref.set(data)
@@ -118,17 +119,25 @@ class FirestoreDB:
         users_ref = self.db.collection(u'product')
         docs = users_ref.stream()
         products = {}
-        id = {}
-        i = 0
         for doc in docs :
             products[doc.id] = doc.to_dict()
             
         for i in products: 
-            if products[i]['name'] == name:
+            if products[i]['name'] == name: # get product name by comparing text search result and db data 
                 return i
+
+    def get_incentives(self):
+        users_ref = self.db.collection(u'incentive')
+        docs = users_ref.stream()
+        incentive = {}
+        for doc in docs :
+            incentive[doc.id] = doc.to_dict()
+            
+        return incentive
+        
      
 if __name__ == '__main__':
-    db = FirestoreDB().get_product_id('Maybelline Dream Matte Mousse Foundation')
+    db = FirestoreDB().get_incentives()
 
 
     

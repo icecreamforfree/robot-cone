@@ -25,10 +25,9 @@ logger= logging.getLogger(__name__)
 
 
 # different constraints for bot status
-START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST , NUM = range(8)
+START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE= range(10)
 # constraints for bot states identification
 SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT = range(7)
-
 # global
 db = FirestoreDB()
 ques = db.get_question()
@@ -115,19 +114,56 @@ def save_data(save_list):
 
     return "\n".join(data_list).join(['\n', '\n'])
 
+def get_incentive(attempt_counter , product_id , user_data):
+    incentive_list = db.get_incentives()
+    return_list = {}
+    end_result = {}
+    n = 0
+    for incentive in incentive_list :
+        dicts ={
+                'start' : incentive_list[incentive]['start date'],
+                'end' : incentive_list[incentive]['end date'],
+                'code' : incentive_list[incentive]['code'],
+                't&c' : incentive_list[incentive]['t&c'],
+        }
+
+        if incentive_list[incentive]['productID'] == product_id :
+            return_list[incentive] = dicts
+            if incentive_list[incentive]['condition']['review attempted'] == attempt_counter:
+                return_list[incentive] = dicts            
+
+            # start_date = "{}/{}/{}".format(start.year, start.month, start.day)
+            # end_date = "{}/{}/{}".format(end.year, end.month, end.day)
+
+    user_data[INCENTIVE] = return_list # set INCENTIVE constraint to the list of incentives
+    for i in user_data[INCENTIVE]:
+        code = user_data[INCENTIVE][i]['code']
+        start_date = user_data[INCENTIVE][i]['start']
+        end_date = user_data[INCENTIVE][i]['end']
+        tc = user_data[INCENTIVE][i]['t&c']
+        end_result[n] = "CONGRATS CONGRATS CONGRATS!!! \nThis is your incentive code: {0} \nPlease use it from {1} to {2} \nTerms and Conditions: {3}\
+            ".format(code, start_date, end_date, tc)
+        n += 1
+
+    return end_result
+        
+
 # callback function for MessageHandler in ConversationHandler
 def state(count):
     def _state(update, context):
         text = update.message.text
         user_id = update.message.from_user.id
         user_data = context.user_data
-        product_name = user_data['name'] 
         logger.info("input %s ", text)
-        
+
+        product_name = user_data['name'] 
+        product_id = db.get_product_id(product_name) 
+
         #constraints to identify review question
         user_data[REVIEW_QUESTION] = True 
         user_data[INFO_QUESTION] = False 
-
+        incentive_id = {}
+        n = 0
         #add data to memory in user_data dictionary
         if(count != 0 ):        
             key = get_question_id(count-1) # get question id from db
@@ -143,8 +179,21 @@ def state(count):
             user_data[REVIEW_DATA] = data_list # set dict to context dict with constraint key          
             reply_text = "This is the review details you have give us. See you again!. {}".format(save_data(save_list))
             update.message.reply_text(reply_text, reply_markup=keyboards(count , context))
-            db.insert_item(user_id, user_data[REVIEW_DATA], db.get_product_id(product_name)) #insert to db
+
+            user_data[ATTEMPT_COUNTER] +=1 # after each review, increment constraint by 1
+ 
+            output = get_incentive(user_data[ATTEMPT_COUNTER] , product_id , user_data) #get incentive
+            for i in output: # reply message according to how many incentive result it returns
+                reply_text = "{}".format(output[i]) 
+                update.message.reply_text(reply_text, reply_markup=keyboards(count , context))
+
+            for i in user_data[INCENTIVE]: # get all incentives id from INCENTIVE constraint
+                incentive_id[str(n)] = "{}".format(i)
+                n += 1
+
+            db.insert_item(user_id, user_data[REVIEW_DATA], product_id, incentive_id) #insert to db
             save_list.clear() #clear the dict
+            data_list.clear()
             return start(update,context) #after review , go back to /start menu again
         else:
             reply_text = "{}".format(get_question(count))
@@ -172,6 +221,7 @@ def user_info(count_info):
             # then calculate the long lat at the next update
             if(user_ques[count_info-1]['type'] == 'location'):  
                 location = geolocator.reverse("{},{}".format(update.message.location.latitude, update.message.location.longitude))
+                # data_list[key] = location.raw['address']['country_code']
                 save_list['location'] = data_list[key] = location.raw['address']['country_code'] # insert into temporary dict
                 logger.info("input %f %f", update.message.location.latitude, update.message.location.longitude)
             else:
@@ -196,6 +246,7 @@ def user_info(count_info):
             db.insert_user_info(user_id, user_data[INFO_DATA]) #insert to db
             user_data[INFO_EXISTED] = True # constraint to check user attempts 
             save_list.clear() # clear temporary dict
+            data_list.clear() 
             return start(update,context)
         else:
             reply_text = "{}".format(get_userinfo_question(count_info))
@@ -205,6 +256,8 @@ def user_info(count_info):
     return _user_info
 
 def start(update, context):
+    if not context.user_data.get(ATTEMPT_COUNTER) : # on first attempt
+        context.user_data[ATTEMPT_COUNTER] = 0  # set ATTEMPT_COUNTER to 0
     rating_keyboard = [['Info'],['Review']]
     reply_text = "Welcome welcome welcome \n /review to start giving review \n /info to add info about yourself"
     rating_markup = ReplyKeyboardMarkup(rating_keyboard , one_time_keyboard=True)
@@ -234,7 +287,7 @@ def do_search(update, context):
     text = update.message.text
     user_data = context.user_data 
     if not user_data.get(START_OVER): # check if it is user's first attempt
-        user_data[PRODUCT_LIST]= search_text(text) # is yes , store text search results into context dict 
+        user_data[PRODUCT_LIST]= search_text(text) # is yes , store text search results into context dict
     else:
         user_data[NUM] += 1 # if it is not first attempt, increment NUM constraint by 1
     
@@ -246,9 +299,8 @@ def do_search(update, context):
         user_data['name'] = user_data[PRODUCT_LIST][user_data[NUM]] # store the text search result to 'name' constraint , it will be overwritten everytime it is set
 
         return RECEIVEDATA
-
-    else: #if it exceed the text search result , bring back to validate_product 
-        reply_text = "Please insert the correct product name again" # prompt user to insert product name again
+    else: #if it exceed the text search result and if there is nothing in the list , bring back to validate_product 
+        reply_text = "Product name doesn't exist. Please insert the correct product name again" # prompt user to insert product name again
         update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove(), one_time_keyboard=True)
         user_data[START_OVER] = True 
 
@@ -261,6 +313,8 @@ def new_end(update, context):
     markup = ReplyKeyboardMarkup(keyboard)
     reply_text = "Click next to the review question" 
     update.message.reply_text(reply_text , reply_markup=markup , one_time_keyboard=True)
+    context.user_data[START_OVER] = False # after one conversation endede , reset constraint to false 
+
     return NEXT
 
 def end(update, context):
