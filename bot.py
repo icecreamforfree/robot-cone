@@ -25,9 +25,9 @@ logger= logging.getLogger(__name__)
 
 
 # different constraints for bot status
-START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE= range(10)
+START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE = range(10)
 # constraints for bot states identification
-SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT = range(7)
+SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_COUNTER= range(8)
 # global
 db = FirestoreDB()
 ques = db.get_question()
@@ -126,24 +126,23 @@ def get_incentive(attempt_counter , product_id , user_data):
                 'code' : incentive_list[incentive]['code'],
                 't&c' : incentive_list[incentive]['t&c'],
         }
-
-        if incentive_list[incentive]['productID'] == product_id :
+        if incentive_list[incentive]['productID'] == product_id and incentive_list[incentive]['condition']['review attempted'] == attempt_counter :
             return_list[incentive] = dicts
-            if incentive_list[incentive]['condition']['review attempted'] == attempt_counter:
-                return_list[incentive] = dicts            
-
             # start_date = "{}/{}/{}".format(start.year, start.month, start.day)
-            # end_date = "{}/{}/{}".format(end.year, end.month, end.day)
-
+            # end_date = "{}/{}/{}".format(end.year, end.month, end.day)   
+            #  
     user_data[INCENTIVE] = return_list # set INCENTIVE constraint to the list of incentives
-    for i in user_data[INCENTIVE]:
-        code = user_data[INCENTIVE][i]['code']
+    for i in user_data[INCENTIVE]: # for every incentive id in the list, use all data related to it 
         start_date = user_data[INCENTIVE][i]['start']
         end_date = user_data[INCENTIVE][i]['end']
+        code = user_data[INCENTIVE][i]['code']
         tc = user_data[INCENTIVE][i]['t&c']
-        end_result[n] = "CONGRATS CONGRATS CONGRATS!!! \nThis is your incentive code: {0} \nPlease use it from {1} to {2} \nTerms and Conditions: {3}\
-            ".format(code, start_date, end_date, tc)
+        end_result[n] = "CONGRATS CONGRATS CONGRATS!!! \nThis is your incentive code: {0}\nPlease use it from {1} to {2} \nTerms and Conditions: {3} \
+            ".format( code , start_date, end_date , tc) # return this message as a reply_text in the bot
         n += 1
+
+        if not user_data.get(i): # i = incentiveID . if it is the first incentiveID returned
+            user_data[i] = 0    # set the counter to 0
 
     return end_result
         
@@ -158,7 +157,7 @@ def state(count):
 
         product_name = user_data['name'] 
         product_id = db.get_product_id(product_name) 
-
+        output = {}
         #constraints to identify review question
         user_data[REVIEW_QUESTION] = True 
         user_data[INFO_QUESTION] = False 
@@ -183,13 +182,19 @@ def state(count):
             user_data[ATTEMPT_COUNTER] +=1 # after each review, increment constraint by 1
  
             output = get_incentive(user_data[ATTEMPT_COUNTER] , product_id , user_data) #get incentive
-            for i in output: # reply message according to how many incentive result it returns
-                reply_text = "{}".format(output[i]) 
+            if(len(output) > 0):
+                for i in output: # reply message according to how many incentive result it returns
+                    reply_text = "{}".format(output[i]) 
+                    update.message.reply_text(reply_text, reply_markup=keyboards(count , context))
+            else: # if theres no incentive returned, send this message instead
+                reply_text = "There's no incentive available for this review" 
                 update.message.reply_text(reply_text, reply_markup=keyboards(count , context))
 
             for i in user_data[INCENTIVE]: # get all incentives id from INCENTIVE constraint
-                incentive_id[str(n)] = "{}".format(i)
+                incentive_id[str(n)] = "{}".format(i) # save it into incentive_list dict to store in db
                 n += 1
+                user_data[i] += 1 # increment counter when it is used
+                print('incentive counter' , user_data[i] , 'incentive id ' , i )
 
             db.insert_item(user_id, user_data[REVIEW_DATA], product_id, incentive_id) #insert to db
             save_list.clear() #clear the dict
