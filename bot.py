@@ -92,15 +92,16 @@ def unknown(update, context):
 
 # return the correct filters for MessageHandler 
 def msg_filter(count):
-    if(count <= len(states_dict)):
-        if(ques[count]['type'] == 'open_ended'):
+    # print('count ', count)
+    if(count-1 <= len(states_dict)):
+        if(ques[count-1]['type'] == 'open_ended'):
             return Filters.text
         else:
             return Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$')
 
 def info_msg_filter(count):
-    if(count <= len(user_ques_dict)):
-        if(user_ques[count]['type'] == 'open_ended'):
+    if(count-1 <= len(user_ques_dict)):
+        if(user_ques[count-1]['type'] == 'open_ended'):
             return Filters.text
         else:
             return Filters.regex('^(1|2|3|4|5|6|7|8|9|10)$')
@@ -345,10 +346,11 @@ def main():
     review_convo = ConversationHandler(
         entry_points=[MessageHandler(Filters.text('^NEXT$'), state(0))], #start first question
         states = states_dict,
-        fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end)],
+        fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end),
+                    CommandHandler('done' , end)],
         allow_reentry = True,
         map_to_parent={
-            DONE : NEXT
+            DONE : END
         })
 
 
@@ -360,7 +362,8 @@ def main():
                                 MessageHandler(Filters.text('^Yes') , new_end)],
                     NEXT : [review_convo]
                 },
-        fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end)],
+        fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end),
+                    CommandHandler('done' , end)],
         allow_reentry = True,
         map_to_parent={
             DONE : SEARCH
@@ -371,7 +374,8 @@ def main():
     user_info_convo = ConversationHandler(
         entry_points=[CommandHandler('info' , user_info(0))],
         states = user_ques_dict,
-        fallbacks=[MessageHandler(Filters.regex('^END$') , end)],
+        fallbacks=[MessageHandler(Filters.regex('^END$') , end),
+                    CommandHandler('done' , end)],
         allow_reentry = True,
         map_to_parent={
             END : SHOWING 
