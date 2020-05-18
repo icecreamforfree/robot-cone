@@ -9,7 +9,7 @@ import json
 class FirestoreDB:
     def __init__(self):
             # Use a service account
-        cred = credentials.Certificate('secrets/cusreview.json')
+        cred = credentials.Certificate('../secrets/cusreview.json')
         firebase_admin.initialize_app(cred)
 
         self.db = firestore.client()
@@ -50,7 +50,8 @@ class FirestoreDB:
             review_question[i] = doc.to_dict()
             # print(u'{} => {}'.format(doc.id, doc.to_dict()))
             i += 1
-        
+        for i in review_question:
+            print(i , ' ' , review_question[i])
         return review_question
 
     #read
@@ -137,7 +138,7 @@ class FirestoreDB:
         
      
 if __name__ == '__main__':
-    db = FirestoreDB().get_incentives()
+    db = FirestoreDB().get_question()
 
 
     
