@@ -12,7 +12,6 @@ from states.start import *
 from acessories.exception_log import *
 from acessories.msg_filters import *
 
-from db.postgresdb import PostgresDB
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -23,23 +22,13 @@ START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_Q
 # constraints for bot states identification
 SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_COUNTER= range(8)
 # global
-
-### FIRESTORE ###
-# db = FirestoreDB()
-# review_ques = db.get_question()
-# review_ques_id = db.get_question_id()
-# review_ques_dict = {}
-# user_ques = db.userinfo_question()
-# user_ques_id = db.userinfo_question_id()
-# user_ques_dict = {}
- 
-psqldb = PostgresDB()
-p_review_ques = psqldb.get_question()
-p_review_ques_id = psqldb.get_question_id()
-p_review_ques_dict = {}
-p_user_ques = psqldb.get_user_question()
-p_user_ques_id = psqldb.get_user_question_id()
-p_user_ques_dict = {}
+db = FirestoreDB()
+review_ques = db.get_question()
+review_ques_id = db.get_question_id()
+review_ques_dict = {}
+user_ques = db.userinfo_question()
+user_ques_id = db.userinfo_question_id()
+user_ques_dict = {}
 
 def done(update, context):
     update.message.reply_text('Bye! Hope to hear form you again! /start to add more ')
@@ -71,29 +60,15 @@ def main():
 
     # update dictionary based on data (questions) in db
     # which will then used for the ConversationHandler's states
-    # for n in review_ques :
-    #     review_ques_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n+1, review_ques, review_ques_dict) , state(n+1 , review_ques , review_ques_id, user_ques , review_ques_dict , user_ques_dict, db))]
-    # for m in user_ques:
-    #     user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1 , user_ques, user_ques_dict) , user_info(m+1, review_ques , user_ques , user_ques_id, review_ques_dict ,user_ques_dict, db))]
-       
-    for n in p_review_ques:
-        # print(n)
-        qid = get_question_id(n, p_review_ques_id)[0]
-        # print('qid ' ,qid)
-        p_review_ques_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n+1, p_review_ques , p_review_ques_dict, psqldb), state(n+1 , p_review_ques , p_review_ques_id, p_user_ques , p_review_ques_dict , p_user_ques_dict, psqldb))]
-        # print('lo ' , msg_filter(n+1, p_review_ques , p_review_ques_dict, psqldb))
-    
-    for i in p_review_ques_dict:
-        print('review ' , i , ' ' , p_review_ques_dict[i])
-    for m in p_user_ques:
-        p_user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1, p_user_ques, p_user_ques_dict, psqldb) , user_info(m+1, p_review_ques , p_user_ques , p_user_ques_id, p_review_ques_dict ,p_user_ques_dict, psqldb))]
-    
-    for i in p_user_ques_dict:
-        print('user ' , i , ' ' , p_user_ques_dict[i])
+    for n in review_ques :
+        review_ques_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n+1, review_ques, review_ques_dict) , state(n+1 , review_ques , review_ques_id, user_ques , review_ques_dict , user_ques_dict, db))]
+    for m in user_ques:
+        user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1 , user_ques, user_ques_dict) , user_info(m+1, review_ques , user_ques , user_ques_id, review_ques_dict ,user_ques_dict, db))]
+
     # third level conversation handler for product review 
     review_convo = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('^NEXT$'), state(0, p_review_ques , p_review_ques_id, p_user_ques , p_review_ques_dict , p_user_ques_dict, psqldb))], #start first question
-        states = p_review_ques_dict,
+        entry_points=[MessageHandler(Filters.text('^NEXT$'), state(0, review_ques , review_ques_id, user_ques , review_ques_dict , user_ques_dict, db))], #start first question
+        states = review_ques_dict,
         fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end),
                     CommandHandler('done' , end)],
         allow_reentry = True,
@@ -120,8 +95,8 @@ def main():
 
     # second level conversation handler for user info 
     user_info_convo = ConversationHandler(
-        entry_points=[CommandHandler('info' , user_info(0, p_review_ques , p_user_ques , p_user_ques_id, p_review_ques_dict ,p_user_ques_dict, psqldb))],
-        states = p_user_ques_dict,
+        entry_points=[CommandHandler('info' , user_info(0, review_ques , user_ques , user_ques_id, review_ques_dict ,user_ques_dict, db))],
+        states = user_ques_dict,
         fallbacks=[MessageHandler(Filters.regex('^END$') , end),
                     CommandHandler('done' , end)],
         allow_reentry = True,
