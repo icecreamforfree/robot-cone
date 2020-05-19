@@ -15,28 +15,25 @@ class FirestoreDB:
         self.db = firestore.client()
         
     # save review data
-    def insert_item(self, userID , user_data, product_id, incentive_id):
+    def insert_item(self, user_id , user_data, product_id, incentive_id):
         #random id
         id = uuid.uuid1()
 
         data = {
-            u'userID': userID,
-            u'productID' : product_id,
+            u'user_id': user_id,
+            u'product_id' : product_id,
             u'review answer': user_data,
-            u'incentiveID' : incentive_id
+            u'incentive_id' : incentive_id
         }
         doc_ref = self.db.collection(u'review').document(str(id))
         doc_ref.set(data)
 
-    def insert_user_info(self, userID , user_data):
-        info = {}
-        for i in user_data:
-            info[i] = user_data[i]
-
+    # save user info
+    def insert_user_info(self, user_id , user_data):
         data = {
-            u'user info': info
+            u'user info': user
         }
-        doc_ref = self.db.collection(u'user').document(u'{}'.format(userID))
+        doc_ref = self.db.collection(u'user').document(u'{}'.format(user_id))
         doc_ref.set(data)
 
     # insertion of first and second level data
@@ -114,7 +111,7 @@ class FirestoreDB:
         i = 0
         for doc in docs:
             review_question[i] = doc.to_dict()
-            review_question[i].update({'review_question_id':doc.id})
+            review_question[i].update({'_id':doc.id})
             i += 1
         for key, value in review_question.items():
             print(key , ' ' , value)
@@ -129,7 +126,7 @@ class FirestoreDB:
         i = 0
         for doc in docs:
             user_question[i] = doc.to_dict()
-            user_question[i].update({'user_question_id':doc.id})
+            user_question[i].update({'_id':doc.id})
             i += 1
         for key, value in user_question.items():
             print(key , ' ' , value)
@@ -137,15 +134,10 @@ class FirestoreDB:
 
     # return product id
     def get_product_id(self, name):
-        users_ref = self.db.collection(u'product')
+        users_ref = self.db.collection(u'product').where(u'name', u'==', u'{}'.format(name))
         docs = users_ref.stream()
-        products = {}
         for doc in docs :
-            products[doc.id] = doc.to_dict()
-            
-        for i in products: 
-            if products[i]['name'] == name: # get product name by comparing text search result and db data 
-                return i
+            return doc.id
 
     # get incentive
     def get_incentives(self):
@@ -155,14 +147,14 @@ class FirestoreDB:
         i = 0
         for doc in docs:
             incentives[i] = doc.to_dict()
-            incentives[i].update({'incentive_id':doc.id})
+            incentives[i].update({'_id':doc.id})
             i += 1
         # for key , value in incentives.items():
         #     print(key , ' ' , value)
         return incentives
 
 if __name__ == '__main__':
-    db = FirestoreDB().review_question()
+    db = FirestoreDB().get_product_id("Maybelline Dream Smooth Mousse Foundation")
 
 
     

@@ -6,6 +6,7 @@ from telegram.ext import (Updater , CommandHandler, MessageHandler, Filters, Inl
 import logging 
 # from db.firestoredb import FirestoreDB
 from db.postgresdb import PostgresDB 
+# from db.mongodb import MongoDB
 from states.review_states import *
 from states.info_states import *
 from states.search import *
@@ -25,6 +26,7 @@ SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_
 # global
 # db = FirestoreDB()
 db = PostgresDB()
+# db = MongoDB()
 review_ques = db.review_question()
 review_ques_dict = {}
 user_ques = db.userinfo_question()

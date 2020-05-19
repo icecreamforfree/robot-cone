@@ -214,7 +214,7 @@ class PostgresDB:
     
     def get_product_id(self, name):
         product = Table('product', self.metadata , autoload=True , autoload_with=self.engine)
-        query = select([product.c.product_id]).where(product.c.product_name == name)
+        query = select([product.c._id]).where(product.c.product_name == name)
         result = self.connection.execute(query).fetchone()
         return result[0]
     

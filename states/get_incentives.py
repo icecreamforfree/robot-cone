@@ -14,7 +14,7 @@ def get_incentive(attempt_counter , product_id , user_data , db):
                 'end' : incentive_list[incentive]['end_date'],
                 'code' : incentive_list[incentive]['code'],
                 't&c' : incentive_list[incentive]['tc'],
-                'id' : incentive_list[incentive]['incentive_id']
+                'id' : incentive_list[incentive]['_id']
         }
         if incentive_list[incentive]['product_id'] == product_id and incentive_list[incentive]['condition'] == '{}'.format(attempt_counter) :
             return_list[incentive] = dicts
