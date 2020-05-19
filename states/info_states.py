@@ -15,7 +15,13 @@ SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_
 data_list = {}
 save_list = {}
 
-def user_info(count_info, review_ques , user_ques , user_ques_id, review_ques_dict ,user_ques_dict, db):
+def location_mapping(update): # calculate long lat to get country code
+    location = geolocator.reverse("{},{}".format(update.message.location.latitude, update.message.location.longitude))
+    country_code = location.raw['address']['country_code']
+    logger.info("input %f %f", update.message.location.latitude, update.message.location.longitude)
+    return country_code
+
+def user_info(count_info, review_ques , user_ques , review_ques_dict ,user_ques_dict, db):
     def _user_info(update, context):
         text = update.message.text
         user_id = update.message.from_user.id
@@ -27,18 +33,14 @@ def user_info(count_info, review_ques , user_ques , user_ques_id, review_ques_di
         user_data[REVIEW_QUESTION] = False
         # add data to memory in user_data dictionary
         if(count_info != 0 ):     
-            key = get_userinfo_question_id(count_info-1 , user_ques_id) # get question id from db
+            key = get_userinfo_question_id(count_info-1 , user_ques) # get question id from db
             question = get_userinfo_question(count_info-1 , user_ques) # get question from db
             # if the question type is location 
             # then calculate the long lat at the next update
             if(user_ques[count_info-1]['type'] == 'location'):  
-                location = geolocator.reverse("{},{}".format(update.message.location.latitude, update.message.location.longitude))
-                data_list[key] = location.raw['address']['country_code']
-                save_list['location'] = data_list[key] = location.raw['address']['country_code'] # insert into temporary dict
-                logger.info("input %f %f", update.message.location.latitude, update.message.location.longitude)
-            else:
-                data_list[key] = text # store into temporary dict
-                save_list[question] = text 
+                text = location_mapping(update)        # then calculate the long lat at the next update
+            data_list[key] = text # store into temporary dict
+            save_list[question] = text 
             save_data(save_list)
         else: # check if it is user's first attempt and return text respectively
             if not user_data.get(INFO_EXISTED):

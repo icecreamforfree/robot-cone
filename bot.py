@@ -4,7 +4,8 @@ from telegram.ext import (Updater , CommandHandler, MessageHandler, Filters, Inl
 # from telegram import (InlineQueryResultArticle, InputTextMessageContent, ReplyKeyboardMarkup,
 #                         KeyboardButton , InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove) 
 import logging 
-from db.firestoredb import FirestoreDB
+# from db.firestoredb import FirestoreDB
+from db.postgresdb import PostgresDB 
 from states.review_states import *
 from states.info_states import *
 from states.search import *
@@ -18,16 +19,15 @@ load_dotenv()
 TOKEN = os.getenv('TELE_TOKEN')
 
 # different constraints for bot status
-START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE = range(10)
+START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE , INCENTIVE_ID = range(11)
 # constraints for bot states identification
 SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_COUNTER= range(8)
 # global
-db = FirestoreDB()
-review_ques = db.get_question()
-review_ques_id = db.get_question_id()
+# db = FirestoreDB()
+db = PostgresDB()
+review_ques = db.review_question()
 review_ques_dict = {}
 user_ques = db.userinfo_question()
-user_ques_id = db.userinfo_question_id()
 user_ques_dict = {}
 
 def done(update, context):
@@ -61,13 +61,13 @@ def main():
     # update dictionary based on data (questions) in db
     # which will then used for the ConversationHandler's states
     for n in review_ques :
-        review_ques_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n+1, review_ques, review_ques_dict) , state(n+1 , review_ques , review_ques_id, user_ques , review_ques_dict , user_ques_dict, db))]
+        review_ques_dict['STATES{}'.format(n+1)] = [MessageHandler(msg_filter(n+1, review_ques, review_ques_dict) , state(n+1 , review_ques , user_ques , review_ques_dict , user_ques_dict, db))]
     for m in user_ques:
-        user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1 , user_ques, user_ques_dict) , user_info(m+1, review_ques , user_ques , user_ques_id, review_ques_dict ,user_ques_dict, db))]
+        user_ques_dict['INFO{}'.format(m+1)] = [MessageHandler(info_msg_filter(m+1 , user_ques, user_ques_dict) , user_info(m+1, review_ques , user_ques , review_ques_dict ,user_ques_dict, db))]
 
     # third level conversation handler for product review 
     review_convo = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('^NEXT$'), state(0, review_ques , review_ques_id, user_ques , review_ques_dict , user_ques_dict, db))], #start first question
+        entry_points=[MessageHandler(Filters.text('^NEXT$'), state(0, review_ques , user_ques , review_ques_dict , user_ques_dict, db))], #start first question
         states = review_ques_dict,
         fallbacks=[MessageHandler(Filters.regex('^DONE$') , new_end),
                     CommandHandler('done' , end)],
@@ -95,7 +95,7 @@ def main():
 
     # second level conversation handler for user info 
     user_info_convo = ConversationHandler(
-        entry_points=[CommandHandler('info' , user_info(0, review_ques , user_ques , user_ques_id, review_ques_dict ,user_ques_dict, db))],
+        entry_points=[CommandHandler('info' , user_info(0, review_ques , user_ques , review_ques_dict ,user_ques_dict, db))],
         states = user_ques_dict,
         fallbacks=[MessageHandler(Filters.regex('^END$') , end),
                     CommandHandler('done' , end)],

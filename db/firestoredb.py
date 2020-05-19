@@ -9,12 +9,12 @@ import json
 class FirestoreDB:
     def __init__(self):
             # Use a service account
-        cred = credentials.Certificate('secrets/cusreview.json')
+        cred = credentials.Certificate('./secrets/cusreview.json')
         firebase_admin.initialize_app(cred)
 
         self.db = firestore.client()
         
-    #write
+    # save review data
     def insert_item(self, userID , user_data, product_id, incentive_id):
         #random id
         id = uuid.uuid1()
@@ -39,81 +39,102 @@ class FirestoreDB:
         doc_ref = self.db.collection(u'user').document(u'{}'.format(userID))
         doc_ref.set(data)
 
-    #read
-    def get_question(self):
+    # insertion of first and second level data
+    def initial_insert(self):
+        arr = {}
+        i = 0
+        # get data from external api 
+        base_url = "http://makeup-api.herokuapp.com/api/v1/products.json"
+        search_params = {
+            'brand' : 'maybelline',
+            'product_type' : 'foundation'
+        }
+        search_response = requests.get(base_url,headers='', params=search_params)
+        
+        for res in search_response.json():
+            product_id = str(uuid.uuid1())
+
+            arr[i] = res
+            product = {
+                u'name': arr[i]['name'],
+                u'brand' : arr[i]['brand'],
+                u'price' : arr[i]['price'],
+                u'salesURL' : arr[i]['product_link']
+            }
+            # insert in product collection
+            prod = self.db.collection(u'product').document(u'{}'.format(product_id))
+            # prod.set(product)
+
+            incentive_dict = {
+               'one ' : {u'product_id' : product_id,
+                            u'code' : 'poiuy09876',
+                            u'start_date' :'2020-05-01',
+                            u'end_date':'2020-06-01',
+                            u'tc':'no minimal purchase',
+                            u'condition':'1'},
+                'three' : { u'product_id' : product_id,
+                            u'code': 'dfghhgf09876',
+                            u'start_date' :'2020-05-01',
+                            u'end_date':'2020-06-01',
+                            u'tc':'mothers day',
+                            u'condition':'2'}
+            }
+            for incen in incentive_dict: # insert incentive based on product_id
+                incentive = self.db.collection(u'incentive').document(u'{}'.format(str(uuid.uuid1())))
+                # incentive.set(incentive_dict[incen])
+            i += 1
+            print('done')
+
+        rev_q_dict = {
+                'one':	{u'question': 'How would you rate this product'	, u'type': 'rating'},
+                'two' : {u'question' :'State any product that you wish we carry'	, u'type':'open_ended'},
+                'thre' : {u'question':'How would you rate our customer service'	, u'type':'rating'},
+                'four' : {u'question':"How likely would u purchase again?"	,u'type':'rating'}
+                }
+        user_q_dict = {
+                'one' : {u"question": "What is your hobby", u'type':	"open_ended"},
+                'two' : {u'question':"What is your age"	,u'type':"open_ended"},
+                'thre' : {u'question':"Whould you like to share your location? , if yes please insert", u'type':	"location"}
+                }
+        for rev in rev_q_dict: # inser review_question
+                review = self.db.collection(u'review_question').document(u'{}'.format(str(uuid.uuid1())))
+                review.set(rev_q_dict[rev])
+                print('done1')
+        for user in user_q_dict: # insert user_question
+                users = self.db.collection(u'user_question').document(u'{}'.format(str(uuid.uuid1())))
+                users.set(user_q_dict[user])
+                print('done2')
+   
+    # get review question
+    def review_question(self):
         # print(users_ref.id)
-        users_ref = self.db.collection(u'question')
+        users_ref = self.db.collection(u'review_question')
         docs = users_ref.stream()
         review_question = {}
         i = 0
         for doc in docs:
             review_question[i] = doc.to_dict()
-            # print(u'{} => {}'.format(doc.id, doc.to_dict()))
+            review_question[i].update({'review_question_id':doc.id})
             i += 1
-        
+        for key, value in review_question.items():
+            print(key , ' ' , value)
+
         return review_question
 
-    #read
-    def get_question_id(self):
-        users_ref = self.db.collection(u'question')
-        docs = users_ref.stream()
-        id = {}
-        i = 0
-        for doc in docs :
-            id[i] = doc.id
-            i += 1
-        
-        return id
-
+    # get user question
     def userinfo_question(self):
-        users_ref = self.db.collection(u'userQuestion')
+        users_ref = self.db.collection(u'user_question')
         docs = users_ref.stream()
         user_question = {}
         i = 0
         for doc in docs:
             user_question[i] = doc.to_dict()
-            # print(u'{} => {}'.format(doc.id, doc.to_dict()))
+            user_question[i].update({'user_question_id':doc.id})
             i += 1
-        # print(user_question)
+        for key, value in user_question.items():
+            print(key , ' ' , value)
         return user_question
 
-    def userinfo_question_id(self):
-        users_ref = self.db.collection(u'userQuestion')
-        docs = users_ref.stream()
-        id = {}
-        i = 0
-        for doc in docs :
-            id[i] = doc.id
-            i += 1
-        # print(id)
-        return id
-
-    def insert_product(self):
-        id = uuid.uuid1()
-        base_url = "http://makeup-api.herokuapp.com/api/v1/products.json"
-        search_params = {
-            'brand' : 'maybelline',
-            'product_type' : 'lipstick'
-        }
-        search_response = requests.get(base_url,headers='', params=search_params)
-        # if search_response.status_code == 200 :
-        arr = {}
-        i = 0
-        for res in search_response.json():
-            # print(res)
-            arr[i] = res
-            i += 1
-        # for a in arr:
-        #     print(arr[a]['name'])
-
-        doc_ref = self.db.collection(u'product').document(u'{}'.format(str(id)))
-        doc_ref.set({
-            u'name': arr[4]['name'],
-            u'brand' : arr[4]['brand'],
-            u'price' : arr[4]['price'],
-            u'salesURL' : arr[4]['product_link']
-        })
-    
     # return product id
     def get_product_id(self, name):
         users_ref = self.db.collection(u'product')
@@ -126,18 +147,22 @@ class FirestoreDB:
             if products[i]['name'] == name: # get product name by comparing text search result and db data 
                 return i
 
+    # get incentive
     def get_incentives(self):
         users_ref = self.db.collection(u'incentive')
         docs = users_ref.stream()
-        incentive = {}
-        for doc in docs :
-            incentive[doc.id] = doc.to_dict()
-            
-        return incentive
-        
-     
+        incentives = {}
+        i = 0
+        for doc in docs:
+            incentives[i] = doc.to_dict()
+            incentives[i].update({'incentive_id':doc.id})
+            i += 1
+        # for key , value in incentives.items():
+        #     print(key , ' ' , value)
+        return incentives
+
 if __name__ == '__main__':
-    db = FirestoreDB().get_incentives()
+    db = FirestoreDB().review_question()
 
 
     
