@@ -3,7 +3,7 @@ from sqlalchemy import *
 import requests
 import psycopg2
 import uuid
-from datetime import date
+from datetime import *
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -11,6 +11,8 @@ URL_ADDON = os.getenv('DATABASE_URL')
 
 today = date.today()
 now = today.strftime("%Y/%m/%d")
+start = datetime(2020,5,1).strftime("%Y/%m/%d")
+end = datetime(2020,6,1).strftime("%Y/%m/%d")
 
 class PostgresDB:
     def __init__(self) :
@@ -20,6 +22,7 @@ class PostgresDB:
             self.connection = self.engine.connect()
             self.metadata = MetaData(self.engine)
             print('success')
+            print('POSTGRESQL')
         except:
             print('connection unsuccesful')
         
@@ -97,8 +100,8 @@ class PostgresDB:
         users = Table('users', self.metadata , autoload=True , autoload_with=self.engine)
 
         incentive_dict = {
-                'two' :   {'code': 'poiuy09876',	'start_date' :'2020-05-01', 'end_date':'2020-06-01'	,'tc':'no minimal purchase', 		'condition':'1'},	
-                'three' : {'code': 'dfghhgf09876',	'start_date' :'2020-05-01', 'end_date':'2020-06-01'	,'tc':'mothers day', 'condition':'2'}
+                'two' :   {'code': 'poiuy09876',	'start_date' :start, 'end_date':end	,'tc':'no minimal purchase', 'condition':'1'},	
+                'three' : {'code': 'dfghhgf09876',	'start_date' :start, 'end_date':end	,'tc':'mothers day', 'condition':'2'}
                 }
         rev_q_dict = {
                 'one':	{'question': 'How would you rate this product'	, 'type': 'rating'},
@@ -145,17 +148,23 @@ class PostgresDB:
         #insert to user table
         users = users.insert().values(user_id = 685948947)
         result = self.connection.execute(users)
+    
+    # check if user id is existed
+    def check_id(self, user_id):
+        user = Table('users', self.metadata , autoload=True , autoload_with=self.engine)
+        query = select([user.c.user_id]).where(user.c.user_id == user_id)
+        results = self.connection.execute(query).fetchall()
+        if results == []: # if id doesnt exist , add to user table
+            usr = user.insert().values(user_id = user_id)
+            result = self.connection.execute(usr)
+            print('added')
+            return
 
     # insert review data
     def insert_item(self, user_id , user_data, product_id, incentive_id):
         review = Table('review', self.metadata , autoload=True , autoload_with=self.engine)
         incentive_given = Table('incentive_given', self.metadata , autoload=True , autoload_with=self.engine)
-        # user = Table('users', self.metadata , autoload=True , autoload_with=self.engine)
-
-        # exists = db.session.query(users).filter_by(users.user_id == user_id).scalar() is not None
-        # if exists :
-        #     print('exist')
-
+        self.check_id(user_id) # check if id existed
 
         for data in user_data:
             reviews = review.insert().values(review_id = uuid.uuid1() , product_id = product_id , question_id = data , answer = user_data[data] , user_id = user_id)
@@ -169,11 +178,7 @@ class PostgresDB:
     # insert user info data
     def insert_user_info(self, user_id, user_data):
         uinfo = Table('user_info', self.metadata , autoload=True , autoload_with=self.engine)
-        # users = Table('users', self.metadata , autoload=True , autoload_with=self.engine)
-
-        # exists = db.session.query(users).filter_by(user.user_id == user_id).scalar() is not None
-        # if exists :
-        #     print('exist')
+        self.check_id(user_id)
 
         for data in user_data:
             info = uinfo.insert().values(user_info_id = uuid.uuid1() , question_id = data , answer = user_data[data] , user_id = user_id)
@@ -236,10 +241,10 @@ class PostgresDB:
 if __name__ == '__main__':
     db = PostgresDB()
     # db.create_tables()
-    # db.insert_item()
+    db.insert_item(685948987)
     # db.insert_item('685948947' , 'f30a0f61-979c-11ea-abb0-b4b686d97da5')
     # db.get_type('0d2c9586-9860-11ea-8ca1-b4b686d97da5')
     # db.get_product_id('Maybelline Dream Smooth Mousse Foundation')
-    db.get_incentives()
+    # db.get_incentives()
 
 

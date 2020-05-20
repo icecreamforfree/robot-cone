@@ -4,15 +4,23 @@ from firebase_admin import firestore
 import uuid
 import requests
 import json
-
+from datetime import *
+today = date.today()
+now = today.strftime("%Y/%m/%d")
+start = datetime(2020,5,1).strftime("%Y/%m/%d")
+end = datetime(2020,6,1).strftime("%Y/%m/%d")
 
 class FirestoreDB:
     def __init__(self):
+        try:
             # Use a service account
-        cred = credentials.Certificate('./secrets/cusreview.json')
-        firebase_admin.initialize_app(cred)
-
-        self.db = firestore.client()
+            cred = credentials.Certificate('./secrets/cusreview.json')
+            firebase_admin.initialize_app(cred)
+            self.db = firestore.client()
+            print('success')
+            print('FIRESTORE')
+        except:
+            print('unsuccessful')
         
     # save review data
     def insert_item(self, user_id , user_data, product_id, incentive_id):
@@ -23,7 +31,8 @@ class FirestoreDB:
             u'user_id': user_id,
             u'product_id' : product_id,
             u'review answer': user_data,
-            u'incentive_id' : incentive_id
+            u'incentive_id' : incentive_id,
+            u'incentive_given_date' : now
         }
         doc_ref = self.db.collection(u'review').document(str(id))
         doc_ref.set(data)
@@ -31,7 +40,7 @@ class FirestoreDB:
     # save user info
     def insert_user_info(self, user_id , user_data):
         data = {
-            u'user info': user
+            u'user info': user_data
         }
         doc_ref = self.db.collection(u'user').document(u'{}'.format(user_id))
         doc_ref.set(data)
@@ -65,20 +74,20 @@ class FirestoreDB:
             incentive_dict = {
                'one ' : {u'product_id' : product_id,
                             u'code' : 'poiuy09876',
-                            u'start_date' :'2020-05-01',
-                            u'end_date':'2020-06-01',
+                            u'start_date' :start,
+                            u'end_date':end,
                             u'tc':'no minimal purchase',
                             u'condition':'1'},
                 'three' : { u'product_id' : product_id,
                             u'code': 'dfghhgf09876',
-                            u'start_date' :'2020-05-01',
-                            u'end_date':'2020-06-01',
+                            u'start_date' :start,
+                            u'end_date':end,
                             u'tc':'mothers day',
                             u'condition':'2'}
             }
             for incen in incentive_dict: # insert incentive based on product_id
                 incentive = self.db.collection(u'incentive').document(u'{}'.format(str(uuid.uuid1())))
-                # incentive.set(incentive_dict[incen])
+                incentive.set(incentive_dict[incen])
             i += 1
             print('done')
 

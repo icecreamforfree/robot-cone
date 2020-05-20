@@ -2,6 +2,8 @@ from pymongo import MongoClient
 import requests
 from datetime import *
 import uuid
+today = date.today()
+now = today.strftime("%Y/%m/%d")
 
 class MongoDB:
     def __init__(self):
@@ -9,6 +11,7 @@ class MongoDB:
             client = MongoClient('localhost' , 27017)
             self.db = client.robotcone
             print('success')
+            print('MONGO')
         except:
             print('unsuccesful')
 
@@ -82,7 +85,8 @@ class MongoDB:
             u'user_id': user_id,
             u'product_id' : product_id,
             u'review answer': user_data,
-            u'incentive_id' : incentive_id
+            u'incentive_id' : incentive_id,
+            u'incentive_given_date' : now
         }
         review = self.db.review.insert_one(data).inserted_id
     
@@ -90,9 +94,10 @@ class MongoDB:
         id = uuid.uuid1()
         data = {
             u'_id' : user_id,
-            u'user info': user_data
+            u'user_info': user_data
         }
-        review = self.db.user.insert_one(data).inserted_id
+        # update on the user_id if exist
+        user_info = self.db.user.update({"_id": user_id}, {'$set':data}, upsert=True)
 
     # get review question
     def review_question(self):

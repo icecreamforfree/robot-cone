@@ -4,9 +4,9 @@ from telegram.ext import (Updater , CommandHandler, MessageHandler, Filters, Inl
 # from telegram import (InlineQueryResultArticle, InputTextMessageContent, ReplyKeyboardMarkup,
 #                         KeyboardButton , InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove) 
 import logging 
-# from db.firestoredb import FirestoreDB
+from db.firestoredb import FirestoreDB
 from db.postgresdb import PostgresDB 
-# from db.mongodb import MongoDB
+from db.mongodb import MongoDB
 from states.review_states import *
 from states.info_states import *
 from states.search import *
@@ -18,15 +18,19 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('TELE_TOKEN')
-
+DB = os.getenv('DATABASE')
 # different constraints for bot status
 START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE , INCENTIVE_ID = range(11)
 # constraints for bot states identification
 SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_COUNTER= range(8)
 # global
-# db = FirestoreDB()
-db = PostgresDB()
-# db = MongoDB()
+if DB == 'POSTGRESQL' :
+    db = PostgresDB()
+elif DB == 'FIRESTORE' :
+    db = FirestoreDB() 
+else:
+    db = MongoDB()
+
 review_ques = db.review_question()
 review_ques_dict = {}
 user_ques = db.userinfo_question()

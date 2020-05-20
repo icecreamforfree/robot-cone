@@ -7,7 +7,7 @@ from acessories.keep_data import *
 # different constraints for bot status
 START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE, INCENTIE_ID = range(11)
 # constraints for bot states identification
-SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_COUNTER= range(8)
+SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_ID= range(8)
 
 data_list = {}
 save_list = {}

@@ -2,7 +2,7 @@ from telegram import (ReplyKeyboardMarkup, KeyboardButton , ReplyKeyboardRemove)
 # different constraints for bot status
 START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE = range(10)
 # constraints for bot states identification
-SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_COUNTER= range(8)
+SHOWING , SELECTING_OPTION ,END , DONE ,SEARCH , RECEIVEDATA , NEXT , INCENTIVE_ID= range(8)
 # return the correct type of keyboard for each type of questions
 def keyboards(count , context,  review_ques, user_ques ,  review_ques_dict, user_ques_dict):
     rating_keyboard = [['1' , '2' , '3' , '4' , '5'],
