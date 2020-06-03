@@ -3,6 +3,7 @@ from telegram.ext import (Updater , CommandHandler, MessageHandler, Filters, Inl
 # from telegram.error import (TelegramError, Unauthorized, BadRequest, TimedOut, ChatMigrated, NetworkError)
 # from telegram import (InlineQueryResultArticle, InputTextMessageContent, ReplyKeyboardMarkup,
 #                         KeyboardButton , InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove) 
+import telegram
 import logging 
 from db.firestoredb import FirestoreDB
 from db.postgresdb import PostgresDB 
@@ -13,12 +14,21 @@ from states.search import *
 from states.start import *
 from acessories.exception_log import *
 from acessories.msg_filters import *
+from flask import Flask, request
 
 import os
 from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('TELE_TOKEN')
 DB = os.getenv('DATABASE')
+HOST = os.getenv('SERVER_HOST')
+SSL_CERT = './secrets/keys/ssl_cert.pem'  # Path to the ssl certificate
+SSL_PRIV = './secrets/keys/pkey.pem'  # Path to the ssl private key
+PORT = 8443
+
+server = Flask(__name__)
+bot = telegram.Bot(token=TOKEN)
+
 # different constraints for bot status
 START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE , INCENTIVE_ID = range(11)
 # constraints for bot states identification
@@ -64,6 +74,7 @@ def main():
     updater = Updater(token=TOKEN , use_context=True)
     dispatcher = updater.dispatcher
 
+    dispatcher.add_error_handler(error_callback)
     # update dictionary based on data (questions) in db
     # which will then used for the ConversationHandler's states
     for n in review_ques :
@@ -131,9 +142,21 @@ def main():
 
     #start bot
     updater.start_polling() 
-
-    #to send stop signal to the bot
+    # try:
+    #     updater.start_webhook(listen='0.0.0.0',
+    #                     port=8443,
+    #                     url_path=TOKEN,
+    #                     key=SSL_PRIV,
+    #                     cert=SSL_CERT,
+    #                     webhook_url='https://{URL}:{PORT}/{TOKEN}'.format(URL=HOST, PORT=PORT, TOKEN=TOKEN))
+    # except:
+    #     print('failed')
+    # #to send stop signal to the bot
     updater.idle() 
+
+
 
 if __name__ == '__main__':
     main()
+    server.run(threaded=True)
+    # server.run(host='0.0.0.0',debug=True)
