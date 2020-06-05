@@ -8,6 +8,7 @@ def get_incentive(attempt_counter , product_id , user_data , db):
     return_list = {}
     end_result = {}
     id_list = {}
+    id = 0
     for incentive in incentive_list :
         dicts ={
                 'start' : incentive_list[incentive]['start_date'],
@@ -18,7 +19,8 @@ def get_incentive(attempt_counter , product_id , user_data , db):
         }
         if incentive_list[incentive]['product_id'] == product_id and incentive_list[incentive]['condition'] == '{}'.format(attempt_counter) :
             return_list[incentive] = dicts
-            id_list[incentive] = dicts['id']
+            id_list[id] = dicts['id']
+            id +=1
              
     user_data[INCENTIVE] = return_list # set INCENTIVE constraint to the list of incentives
     user_data[INCENTIVE_ID] = id_list
@@ -32,7 +34,7 @@ def get_incentive(attempt_counter , product_id , user_data , db):
         i += 1
 
     for i in user_data[INCENTIVE_ID]:
-        print(i, user_data[INCENTIVE_ID][i])
+        print('incentive ' ,i, user_data[INCENTIVE_ID][i])
         if not user_data.get(user_data[INCENTIVE_ID][i]): # if it is the first incentiveID --> user_data[INCENTIVE][i] returned
             user_data[user_data[INCENTIVE_ID][i]] = 0    # set the counter to 0 
 

@@ -14,7 +14,6 @@ from states.search import *
 from states.start import *
 from acessories.exception_log import *
 from acessories.msg_filters import *
-from flask import Flask, request
 
 import os
 from dotenv import load_dotenv
@@ -22,11 +21,7 @@ load_dotenv()
 TOKEN = os.getenv('TELE_TOKEN')
 DB = os.getenv('DATABASE')
 HOST = os.getenv('SERVER_HOST')
-SSL_CERT = './secrets/keys/ssl_cert.pem'  # Path to the ssl certificate
-SSL_PRIV = './secrets/keys/pkey.pem'  # Path to the ssl private key
-PORT = 8443
 
-server = Flask(__name__)
 bot = telegram.Bot(token=TOKEN)
 
 # different constraints for bot status
@@ -136,27 +131,19 @@ def main():
         allow_reentry = True)
     dispatcher.add_handler(top_level_handler)
 
-    #wrong command
+    # wrong command
     wrong_command = MessageHandler(Filters.command, unknown)
     dispatcher.add_handler(wrong_command)
 
-    #start bot
-    updater.start_polling() 
-    # try:
-    #     updater.start_webhook(listen='0.0.0.0',
-    #                     port=8443,
-    #                     url_path=TOKEN,
-    #                     key=SSL_PRIV,
-    #                     cert=SSL_CERT,
-    #                     webhook_url='https://{URL}:{PORT}/{TOKEN}'.format(URL=HOST, PORT=PORT, TOKEN=TOKEN))
-    # except:
-    #     print('failed')
-    # #to send stop signal to the bot
+    # webhook
+    updater.start_webhook(listen='127.0.0.1', port=5000, url_path=TOKEN)
+    updater.bot.set_webhook(url='https://{HOST}/{TOKEN}'.format(HOST=HOST, TOKEN=TOKEN))
+    print('in')
+
+    # polling
+    #updater.start_polling() 
+
     updater.idle() 
-
-
 
 if __name__ == '__main__':
     main()
-    server.run(threaded=True)
-    # server.run(host='0.0.0.0',debug=True)
