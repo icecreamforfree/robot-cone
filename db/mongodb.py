@@ -36,7 +36,7 @@ class MongoDB:
                 u'name': arr[i]['name'],
                 u'brand' : arr[i]['brand'],
                 u'price' : arr[i]['price'],
-                u'salesURL' : arr[i]['product_link']
+                u'sales_url' : arr[i]['product_link']
             }
             product = self.db.product.insert_one(product).inserted_id
 
@@ -71,11 +71,11 @@ class MongoDB:
                 'two' : {u'_id': str(uuid.uuid1()), u'question':"What is your age"	,u'type':"open_ended"},
                 'thre' : {u'_id': str(uuid.uuid1()), u'question':"Whould you like to share your location? , if yes please insert", u'type':	"location"}
                 }
-        for rev in rev_q_dict: # inser review_question
-                review = self.db.review_question.insert_one(rev_q_dict[rev]).inserted_id
+        # for rev in rev_q_dict: # inser review_question
+        #         review = self.db.review_question.insert_one(rev_q_dict[rev]).inserted_id
 
-        for user in user_q_dict: # insert user_question
-                users = self.db.user_question.insert_one(user_q_dict[user]).inserted_id
+        # for user in user_q_dict: # insert user_question
+        #         users = self.db.user_question.insert_one(user_q_dict[user]).inserted_id
 
     # save review data
     def insert_item(self, user_id , user_data, product_id, incentive_id):
@@ -84,7 +84,7 @@ class MongoDB:
             u'_id' : str(id),
             u'user_id': user_id,
             u'product_id' : product_id,
-            u'review answer': user_data,
+            u'review_answer': user_data,
             u'incentive_id' : incentive_id,
             u'incentive_given_date' : now
         }
@@ -146,4 +146,4 @@ if __name__ == '__main__':
     db = MongoDB()
     # db.get_product_id("Maybelline Dream Smooth Mousse Foundation")
     # db.get_incentives()
-    db.review_question()
+    db.initial_insert()

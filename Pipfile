@@ -14,6 +14,8 @@ algoliasearch = ">=2.0,<3.0"
 pymongo = "*"
 protobuf = "==3.11.3"
 requests = "*"
+sqlalchemy = "*"
+psycopg2 = "*"
 
 [requires]
 python_version = "3.8"

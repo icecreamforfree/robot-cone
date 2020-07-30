@@ -30,7 +30,7 @@ class FirestoreDB:
         data = {
             u'user_id': user_id,
             u'product_id' : product_id,
-            u'review answer': user_data,
+            u'review_answer': user_data,
             u'incentive_id' : incentive_id,
             u'incentive_given_date' : now
         }
@@ -40,7 +40,7 @@ class FirestoreDB:
     # save user info
     def insert_user_info(self, user_id , user_data):
         data = {
-            u'user info': user_data
+            u'user_info': user_data
         }
         doc_ref = self.db.collection(u'user').document(u'{}'.format(user_id))
         doc_ref.set(data)
@@ -65,11 +65,11 @@ class FirestoreDB:
                 u'name': arr[i]['name'],
                 u'brand' : arr[i]['brand'],
                 u'price' : arr[i]['price'],
-                u'salesURL' : arr[i]['product_link']
+                u'sales_url' : arr[i]['product_link']
             }
             # insert in product collection
             prod = self.db.collection(u'product').document(u'{}'.format(product_id))
-            # prod.set(product)
+            prod.set(product)
 
             incentive_dict = {
                'one ' : {u'product_id' : product_id,
@@ -163,7 +163,7 @@ class FirestoreDB:
         return incentives
 
 if __name__ == '__main__':
-    db = FirestoreDB().get_product_id("Maybelline Dream Smooth Mousse Foundation")
+    db = FirestoreDB()
 
 
     
