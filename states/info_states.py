@@ -4,6 +4,7 @@ from acessories.keyboards import *
 from states.start import *
 from acessories.keep_data import *
 from geopy.geocoders import Nominatim
+import logging 
 
 #geocoding
 geolocator = Nominatim(user_agent="icecreamforfree")

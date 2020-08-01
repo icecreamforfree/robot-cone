@@ -18,7 +18,7 @@ class MongoDB:
     # insertion of first and second level data
     def initial_insert(self):
         arr = {}
-        i = 0
+        id = 0
         base_url = "http://makeup-api.herokuapp.com/api/v1/products.json"
         search_params = {
             'brand' : 'maybelline',
@@ -30,7 +30,8 @@ class MongoDB:
             product_id = str(uuid.uuid1())
             start = datetime(2020,5,1).strftime("%Y/%m/%d")
             end = datetime(2020,6,1).strftime("%Y/%m/%d")
-            arr[i] = res
+            arr[id] = res
+            
             product = {
                 u'_id' : product_id,
                 u'name': arr[i]['name'],
@@ -39,7 +40,7 @@ class MongoDB:
                 u'sales_url' : arr[i]['product_link']
             }
             product = self.db.product.insert_one(product).inserted_id
-
+            print('inserted product')
             incentive_dict = {
                'one ' : {   
                             u'_id' : str(uuid.uuid1()),
@@ -60,6 +61,8 @@ class MongoDB:
             }
             for incen in incentive_dict:
                 incentive = self.db.incentive.insert_one(incentive_dict[incen]).inserted_id
+                print('inserted incen')
+            id += 1
         rev_q_dict = {
                 'one':	{u'_id': str(uuid.uuid1()), u'question': 'How would you rate this product'	, u'type': 'rating'},
                 'two' : {u'_id': str(uuid.uuid1()), u'question' :'State any product that you wish we carry'	, u'type':'open_ended'},
@@ -71,11 +74,14 @@ class MongoDB:
                 'two' : {u'_id': str(uuid.uuid1()), u'question':"What is your age"	,u'type':"open_ended"},
                 'thre' : {u'_id': str(uuid.uuid1()), u'question':"Whould you like to share your location? , if yes please insert", u'type':	"location"}
                 }
-        # for rev in rev_q_dict: # inser review_question
-        #         review = self.db.review_question.insert_one(rev_q_dict[rev]).inserted_id
+        for rev in rev_q_dict: # inser review_question
+            review = self.db.review_question.insert_one(rev_q_dict[rev]).inserted_id
+            print('inserted review q')
 
-        # for user in user_q_dict: # insert user_question
-        #         users = self.db.user_question.insert_one(user_q_dict[user]).inserted_id
+
+        for user in user_q_dict: # insert user_question
+            users = self.db.user_question.insert_one(user_q_dict[user]).inserted_id
+            print('inserted user q')
 
     # save review data
     def insert_item(self, user_id , user_data, product_id, incentive_id):
@@ -146,4 +152,3 @@ if __name__ == '__main__':
     db = MongoDB()
     # db.get_product_id("Maybelline Dream Smooth Mousse Foundation")
     # db.get_incentives()
-    db.initial_insert()

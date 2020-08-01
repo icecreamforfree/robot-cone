@@ -4,6 +4,8 @@ from acessories.keyboards import *
 from states.get_incentives import *
 from states.start import *
 from acessories.keep_data import *
+import logging 
+
 # different constraints for bot status
 START_OVER , REVIEW_DATA  , INFO_DATA , INFO_EXISTED  , REVIEW_QUESTION , INFO_QUESTION , PRODUCT_LIST ,NUM , ATTEMPT_COUNTER , INCENTIVE, INCENTIE_ID = range(11)
 # constraints for bot states identification

@@ -26,7 +26,7 @@ class FirestoreDB:
     def insert_item(self, user_id , user_data, product_id, incentive_id):
         #random id
         id = uuid.uuid1()
-
+        
         data = {
             u'user_id': user_id,
             u'product_id' : product_id,
